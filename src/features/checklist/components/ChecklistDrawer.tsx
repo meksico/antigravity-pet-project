@@ -1,4 +1,4 @@
-import { CheckSquare, ShieldAlert, Square, X } from 'lucide-react'
+import { Check, CheckCircle2, ListChecks, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import type { ChecklistStepItem, LaptopRecord } from '../../../schemas/laptopRecordSchema'
 
@@ -60,103 +60,156 @@ export function ChecklistDrawer({
     onClose()
   }
 
-  // Group steps by category while preserving order
-  const categories = Array.from(new Set(steps.map((s) => s.category)))
-
   return (
     <div className="modal-backdrop">
-      <aside
-        className="drawer-panel"
+      <div
+        className="checklist-modal"
         role="dialog"
         aria-modal="true"
-        aria-label="Чек-ліст інсталяції"
+        aria-label="Перевірка інсталяції"
       >
-        <div className="modal-header">
-          <div>
-            <h2 className="modal-title">
-              Чек-ліст інсталяції ПЕОМ: {record.hostname} (ID #{record.id})
-            </h2>
-            <p className="modal-subtitle">
-              Інв.н. {record.inventoryNumber} • Підрозділ: {record.subdivision} • Політика:{' '}
-              {record.policy}
-            </p>
+        {/* Dark Header matching Pasted 25-10-2026 at 20.10.01.png */}
+        <div className="checklist-modal__header">
+          <div className="checklist-modal__brand">
+            <div className="checklist-modal__icon-box" aria-hidden="true">
+              <ListChecks size={22} />
+            </div>
+            <div>
+              <div className="checklist-modal__title-row">
+                <h2 className="checklist-modal__title">Перевірка інсталяції</h2>
+                <span className="checklist-modal__id-pill">ID #{record.id}</span>
+              </div>
+              <p className="checklist-modal__subtitle">
+                ПЕОМ: «{record.hostname || '—'}» • Відповідальний: «{record.responsibleName || '—'}»
+              </p>
+            </div>
           </div>
+
           <button
             type="button"
-            className="btn btn--ghost btn--sm"
+            className="btn-close-dark"
             aria-label="Закрити"
             onClick={onClose}
           >
-            <X size={18} />
+            <X size={20} />
           </button>
         </div>
 
-        <div className="drawer-toolbar">
-          <div className="drawer-progress">
-            <span className="drawer-progress__label">Прогрес виконання (27 кроків):</span>
-            <strong data-testid="checklist-progress">
-              {completedCount} / {totalCount} ({percent}%)
-            </strong>
+        {/* Subheader Progress & Bulk Actions Bar */}
+        <div className="checklist-modal__subbar">
+          <div className="checklist-modal__progress-col">
+            <div className="checklist-modal__progress-top">
+              <span className="checklist-modal__progress-label">
+                Прогрес перевірки:{' '}
+                <strong
+                  className={isAllChecked ? 'text-emerald' : 'text-amber'}
+                  data-testid="checklist-progress"
+                >
+                  {completedCount} з {totalCount} ({percent}%)
+                </strong>
+              </span>
+
+              {isAllChecked && (
+                <span className="checklist-ready-pill">
+                  <CheckCircle2 size={13} />
+                  <span>Готово до 100%</span>
+                </span>
+              )}
+            </div>
+
+            <div className="checklist-progress-track" aria-hidden="true">
+              <div
+                className={`checklist-progress-fill ${
+                  isAllChecked ? 'checklist-progress-fill--complete' : ''
+                }`}
+                style={{ width: `${percent}%` }}
+              />
+            </div>
           </div>
-          <div className="drawer-toolbar__actions">
-            <button type="button" className="btn btn--secondary btn--sm" onClick={markAllSteps}>
-              <CheckSquare size={14} />
-              <span>Відмітити всі 27 кроків</span>
+
+          <div className="checklist-modal__bulk-btns">
+            <button
+              type="button"
+              className="btn-checklist-outline btn-checklist-outline--blue"
+              onClick={markAllSteps}
+            >
+              Обрати всі
             </button>
-            <button type="button" className="btn btn--ghost btn--sm" onClick={clearAllSteps}>
-              <Square size={14} />
-              <span>Очистити</span>
+            <button
+              type="button"
+              className="btn-checklist-outline"
+              onClick={clearAllSteps}
+            >
+              Скинути
             </button>
           </div>
         </div>
 
-        <div className="drawer-security-banner">
-          <ShieldAlert size={16} aria-hidden="true" />
-          <span>
-            Паролі локальних адміністраторів не зберігаються в таблиці (Аудит безпеки: читається
-            виключно стовпець A аркуша «Чек-ліст»).
-          </span>
+        {/* Flat 27-Step Scrollable Pill List */}
+        <div className="checklist-modal__body">
+          <ul className="checklist-pills-list">
+            {steps.map((step) => {
+              const isChecked = checkedNumbers.includes(step.stepNumber)
+              return (
+                <li key={step.stepNumber}>
+                  <label
+                    className={`checklist-pill-row ${
+                      isChecked ? 'checklist-pill-row--checked' : ''
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      className="checklist-pill-row__checkbox"
+                      checked={isChecked}
+                      onChange={() => toggleStep(step.stepNumber)}
+                    />
+                    <span className="checklist-pill-row__num">#{step.stepNumber}</span>
+                    <span className="checklist-pill-row__title">{step.title}</span>
+                  </label>
+                </li>
+              )
+            })}
+          </ul>
         </div>
 
-        <div className="drawer-body">
-          {categories.map((category) => {
-            const categorySteps = steps.filter((s) => s.category === category)
-            return (
-              <div key={category} className="checklist-group">
-                <h3 className="checklist-group__title">{category}</h3>
-                <ul className="checklist-list">
-                  {categorySteps.map((step) => {
-                    const isChecked = checkedNumbers.includes(step.stepNumber)
-                    return (
-                      <li key={step.stepNumber} className="checklist-item">
-                        <label className="checklist-item__label">
-                          <input
-                            type="checkbox"
-                            checked={isChecked}
-                            onChange={() => toggleStep(step.stepNumber)}
-                          />
-                          <span className="checklist-item__num">#{step.stepNumber}</span>
-                          <span className="checklist-item__text">{step.title}</span>
-                        </label>
-                      </li>
-                    )
-                  })}
-                </ul>
-              </div>
-            )
-          })}
-        </div>
+        {/* Footer matching Pasted 25-10-2026 at 20.10.01.png */}
+        <div className="checklist-modal__footer">
+          <div className="checklist-modal__status-note">
+            <CheckCircle2
+              size={16}
+              className={isAllChecked ? 'text-emerald' : 'text-muted'}
+              aria-hidden="true"
+            />
+            <span className={isAllChecked ? 'text-emerald-dark' : 'text-muted'}>
+              {isAllChecked
+                ? 'Всі пункти відмічено: після збереження статус зміниться на «Інстальований на 100%»'
+                : `Відмічено ${completedCount} з ${totalCount} пунктів чек-ліста інсталяції`}
+            </span>
+          </div>
 
-        <div className="modal-footer">
-          <button type="button" className="btn btn--secondary" onClick={onClose}>
-            Закрити
-          </button>
-          <button type="button" className="btn btn--primary" onClick={handleConfirm}>
-            Підтвердити виконання чек-ліста
-          </button>
+          <div className="checklist-modal__footer-actions">
+            <button
+              type="button"
+              className="btn-checklist-cancel"
+              onClick={onClose}
+            >
+              Скасувати
+            </button>
+            <button
+              type="button"
+              className="btn-checklist-save"
+              onClick={handleConfirm}
+            >
+              <Check size={16} />
+              <span>
+                {isAllChecked
+                  ? 'Зберегти (Інстальований на 100%)'
+                  : `Зберегти (${completedCount}/${totalCount})`}
+              </span>
+            </button>
+          </div>
         </div>
-      </aside>
+      </div>
     </div>
   )
 }
-

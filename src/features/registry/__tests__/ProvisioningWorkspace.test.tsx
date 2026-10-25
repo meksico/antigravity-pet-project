@@ -147,7 +147,7 @@ describe('Provisioning Accounting Workspace — Картки обліку ПЕО
     expect(screen.getByTestId('kpi-total')).toHaveTextContent('5')
   })
 
-  it('opens the 27-step Чек-ліст drawer from a card or table, toggles steps, and updates Column AA (AC-007)', async () => {
+  it('opens the 27-step Перевірка інсталяції modal from a card or table, toggles steps, and updates Column AA (AC-007)', async () => {
     const user = userEvent.setup()
     render(<App />)
 
@@ -156,20 +156,27 @@ describe('Provisioning Accounting Workspace — Картки обліку ПЕО
     })
     await user.click(checklistBtns[0]!)
 
-    const drawer = screen.getByRole('dialog', { name: /Чек-ліст інсталяції/i })
+    const drawer = screen.getByRole('dialog', { name: /Перевірка інсталяції/i })
+    expect(within(drawer).getByText('ID #104')).toBeInTheDocument()
+    expect(
+      within(drawer).getByText(/ПЕОМ: «DESKTOP-DEMO104» • Відповідальний: «Шевченко Василь Олегович»/i),
+    ).toBeInTheDocument()
     expect(within(drawer).getByText('Вимкнені всі трекінг активності')).toBeInTheDocument()
     expect(within(drawer).getByText(/Додана наліпка з паролем User\/Admin/i)).toBeInTheDocument()
 
     await user.click(within(drawer).getByText('Доданий SecAdmin'))
-    expect(within(drawer).getByTestId('checklist-progress')).toHaveTextContent('1 / 27 (4%)')
-    await user.click(within(drawer).getByRole('button', { name: /Очистити/i }))
-    expect(within(drawer).getByTestId('checklist-progress')).toHaveTextContent('0 / 27 (0%)')
+    expect(within(drawer).getByTestId('checklist-progress')).toHaveTextContent('1 з 27 (4%)')
+    await user.click(within(drawer).getByRole('button', { name: /Скинути/i }))
+    expect(within(drawer).getByTestId('checklist-progress')).toHaveTextContent('0 з 27 (0%)')
 
-    await user.click(within(drawer).getByRole('button', { name: /Відмітити всі 27 кроків/i }))
-    expect(within(drawer).getByTestId('checklist-progress')).toHaveTextContent('27 / 27 (100%)')
+    await user.click(within(drawer).getByRole('button', { name: /Обрати всі/i }))
+    expect(within(drawer).getByTestId('checklist-progress')).toHaveTextContent('27 з 27 (100%)')
+    expect(within(drawer).getByText(/Готово до 100%/i)).toBeInTheDocument()
 
-    await user.click(within(drawer).getByRole('button', { name: /Підтвердити виконання чек-ліста/i }))
-    expect(screen.queryByRole('dialog', { name: /Чек-ліст інсталяції/i })).not.toBeInTheDocument()
+    await user.click(
+      within(drawer).getByRole('button', { name: /Зберегти \(Інстальований на 100%\)/i }),
+    )
+    expect(screen.queryByRole('dialog', { name: /Перевірка інсталяції/i })).not.toBeInTheDocument()
   })
 
   it('executes laptop handover via HandoverModal and supports bulk actions & CSV export (AC-008, AC-009)', async () => {
