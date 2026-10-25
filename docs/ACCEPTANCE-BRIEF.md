@@ -217,3 +217,4 @@ Provide an authenticated, client-side React 19 SPA that enables technical operat
 
 ### Phase 5: Verification Loop, Accessibility & Production Build
 - Run full ECC [`verification-loop`](../.agents/skills/verification-loop/SKILL.md) (TypeScript check, Oxlint, Vitest coverage $\ge 80\%$, security scan, production build).
+

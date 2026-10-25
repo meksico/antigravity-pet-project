@@ -1,0 +1,419 @@
+import { useMemo, useState } from 'react'
+import {
+  DEFAULT_CHECKLIST_STEPS,
+  DEFAULT_DICTIONARIES,
+  SYNTHETIC_LAPTOP_RECORDS,
+} from '../../../mocks/syntheticData'
+import type {
+  ChecklistStepItem,
+  LaptopRecord,
+  ReferenceDictionaries,
+} from '../../../schemas/laptopRecordSchema'
+import {
+  normalizeMacAddress,
+  sanitizeFormulaTrigger,
+} from '../../../services/converters/normalizers'
+import { GoogleSheetsClient } from '../../../services/sheets/sheetsClient'
+import { OperatorSessionBar } from '../../auth/components/OperatorSessionBar'
+import { useAuth } from '../../auth/hooks/useAuth'
+import { ChecklistDrawer } from '../../checklist/components/ChecklistDrawer'
+import { BulkActionsBar } from './BulkActionsBar'
+import { HandoverModal } from './HandoverModal'
+import { IntakeModal } from './IntakeModal'
+import { RegistryFilterBar, type RegistryFiltersState } from './RegistryFilterBar'
+import { RegistryGrid } from './RegistryGrid'
+import { RegistryKpiBar } from './RegistryKpiBar'
+
+const INITIAL_FILTERS: RegistryFiltersState = {
+  searchQuery: '',
+  status: 'all',
+  subdivision: 'all',
+  network: 'all',
+  asType: 'all',
+  securityClassification: 'all',
+  columnGroup: 'compact',
+}
+
+export function ProvisioningWorkspace() {
+  const { session, spreadsheetId, presets, getAccessToken } = useAuth()
+
+  const [records, setRecords] = useState<readonly LaptopRecord[]>(SYNTHETIC_LAPTOP_RECORDS)
+  const [dictionaries, setDictionaries] = useState<ReferenceDictionaries>(DEFAULT_DICTIONARIES)
+  const [checklistSteps, setChecklistSteps] =
+    useState<readonly ChecklistStepItem[]>(DEFAULT_CHECKLIST_STEPS)
+  const [filters, setFilters] = useState<RegistryFiltersState>(INITIAL_FILTERS)
+  const [selectedIds, setSelectedIds] = useState<readonly number[]>([])
+
+  const [isIntakeOpen, setIsIntakeOpen] = useState(false)
+  const [activeChecklistRecord, setActiveChecklistRecord] = useState<LaptopRecord | null>(null)
+  const [activeHandoverRecord, setActiveHandoverRecord] = useState<LaptopRecord | null>(null)
+  const [isSyncing, setIsSyncing] = useState(false)
+  const [syncBanner, setSyncBanner] = useState<string | null>(null)
+
+  const sheetsClient = useMemo(() => {
+    if (session?.mode === 'google' && spreadsheetId.trim()) {
+      return new GoogleSheetsClient({
+        spreadsheetId: spreadsheetId.trim(),
+        getAccessToken,
+      })
+    }
+    return null
+  }, [session?.mode, spreadsheetId, getAccessToken])
+
+  const handleSyncWithGoogleSheets = async () => {
+    if (!sheetsClient) {
+      return
+    }
+    setIsSyncing(true)
+    setSyncBanner(null)
+    try {
+      const workbook = await sheetsClient.fetchWorkbookData()
+      setRecords(workbook.records)
+      setDictionaries(workbook.dictionaries)
+      setChecklistSteps(workbook.checklistSteps)
+      setSyncBanner(`Синхронізовано з Google Sheets (${workbook.records.length} записів)`)
+    } catch (error) {
+      setSyncBanner(
+        error instanceof Error ? error.message : 'Помилка синхронізації з Google Sheets',
+      )
+    } finally {
+      setIsSyncing(false)
+    }
+  }
+
+  const filteredRecords = useMemo(() => {
+    const rawQuery = filters.searchQuery.trim().toLowerCase()
+    const normalizedMacQuery = normalizeMacAddress(filters.searchQuery).toLowerCase()
+
+    return records.filter((record) => {
+      if (filters.status === 'completed' && !record.isCompleted) return false
+      if (filters.status === 'pending' && record.isCompleted) return false
+      if (filters.subdivision !== 'all' && record.subdivision !== filters.subdivision) return false
+      if (filters.network !== 'all' && record.network !== filters.network) return false
+      if (filters.asType !== 'all' && record.asType !== filters.asType) return false
+      if (
+        filters.securityClassification !== 'all' &&
+        record.securityClassification !== filters.securityClassification
+      ) {
+        return false
+      }
+
+      if (!rawQuery) {
+        return true
+      }
+
+      const searchableFields = [
+        String(record.id),
+        record.inventoryNumber,
+        record.hostname,
+        record.wifiMac,
+        record.esetInstanceId,
+        record.responsibleName,
+        record.issuedToName ?? '',
+        record.subdivision,
+        record.militaryUnit,
+      ]
+        .join(' ')
+        .toLowerCase()
+
+      const matchesText = searchableFields.includes(rawQuery)
+      const matchesMac =
+        normalizedMacQuery.length >= 4 &&
+        record.wifiMac.toLowerCase().includes(normalizedMacQuery)
+
+      return matchesText || matchesMac
+    })
+  }, [records, filters])
+
+  const handleUpdateFilters = (partial: Partial<RegistryFiltersState>) => {
+    setFilters((prev) => ({ ...prev, ...partial }))
+  }
+
+  const handleResetFilters = () => {
+    setFilters(INITIAL_FILTERS)
+  }
+
+  const handleCreateIntake = async (
+    draft: Omit<LaptopRecord, 'rowIndex' | 'id' | 'isCompleted'>,
+  ) => {
+    const maxId = records.reduce((max, r) => (r.id > max ? r.id : max), 0)
+    const maxRowIndex = records.reduce((max, r) => (r.rowIndex > max ? r.rowIndex : max), 1)
+
+    const optimisticRecord: LaptopRecord = {
+      ...draft,
+      id: maxId + 1,
+      rowIndex: maxRowIndex + 1,
+      isCompleted: Boolean(draft.issuedAt),
+    }
+
+    setRecords((prev) => [...prev, optimisticRecord])
+
+    if (sheetsClient) {
+      try {
+        const persisted = await sheetsClient.createLaptopRecord(draft)
+        setRecords((prev) =>
+          prev.map((item) => (item.id === optimisticRecord.id ? persisted : item)),
+        )
+      } catch (error) {
+        setSyncBanner(
+          error instanceof Error ? error.message : 'Помилка запису нового лептопа в Google Sheets',
+        )
+      }
+    }
+  }
+
+  const handleConfirmChecklist = async (recordId: number, completed: boolean) => {
+    const target = records.find((r) => r.id === recordId)
+    if (!target) return
+
+    const updatedRecord: LaptopRecord = {
+      ...target,
+      checklistCompleted: completed,
+    }
+
+    setRecords((prev) => prev.map((r) => (r.id === recordId ? updatedRecord : r)))
+
+    if (sheetsClient) {
+      try {
+        await sheetsClient.updateLaptopRecord(updatedRecord)
+      } catch (error) {
+        setSyncBanner(error instanceof Error ? error.message : 'Помилка збереження чек-ліста')
+      }
+    }
+  }
+
+  const handleConfirmHandover = async (
+    recordId: number,
+    payload: { issuedAt: string; issuedToName: string; issuedToPhone: string },
+  ) => {
+    const target = records.find((r) => r.id === recordId)
+    if (!target) return
+
+    const updatedRecord: LaptopRecord = {
+      ...target,
+      issuedAt: payload.issuedAt,
+      issuedToName: payload.issuedToName,
+      issuedToPhone: payload.issuedToPhone,
+      isCompleted: true,
+    }
+
+    setRecords((prev) => prev.map((r) => (r.id === recordId ? updatedRecord : r)))
+
+    if (sheetsClient) {
+      try {
+        await sheetsClient.updateLaptopRecord(updatedRecord)
+      } catch (error) {
+        setSyncBanner(error instanceof Error ? error.message : 'Помилка збереження видачі')
+      }
+    }
+  }
+
+  const handleToggleSelectRow = (id: number) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id],
+    )
+  }
+
+  const handleToggleSelectAll = () => {
+    const visibleIds = filteredRecords.map((r) => r.id)
+    const allVisibleSelected =
+      visibleIds.length > 0 && visibleIds.every((id) => selectedIds.includes(id))
+
+    if (allVisibleSelected) {
+      setSelectedIds((prev) => prev.filter((id) => !visibleIds.includes(id)))
+    } else {
+      setSelectedIds((prev) => Array.from(new Set([...prev, ...visibleIds])))
+    }
+  }
+
+  const handleApplyBulkChanges = async (changes: {
+    policy?: string
+    network?: string
+    checklistCompleted?: boolean
+  }) => {
+    const selectedSet = new Set(selectedIds)
+    const updatedBatch = records
+      .filter((record) => selectedSet.has(record.id))
+      .map((record) => ({
+        ...record,
+        policy: changes.policy ?? record.policy,
+        network: changes.network ?? record.network,
+        checklistCompleted: changes.checklistCompleted ?? record.checklistCompleted,
+      }))
+
+    const updatedById = new Map(updatedBatch.map((r) => [r.id, r]))
+    setRecords((prev) => prev.map((record) => updatedById.get(record.id) ?? record))
+
+    setSelectedIds([])
+
+    if (sheetsClient && updatedBatch.length > 0) {
+      try {
+        await sheetsClient.batchUpdateLaptopRecords(updatedBatch)
+      } catch (error) {
+        setSyncBanner(error instanceof Error ? error.message : 'Помилка пакетного оновлення')
+      }
+    }
+  }
+
+  const handleExportCsv = () => {
+    const headers = [
+      'ID',
+      'Дата/час прийняття',
+      'Дата/час видачі',
+      'Видано ФІО',
+      'Видано тел.',
+      '_isCompleted',
+      'Підрозділ',
+      'Місцезнаходження',
+      'Опис ПЕОМ',
+      'Мережа',
+      'Тип оновлення',
+      'ГОД',
+      'Инв.н.',
+      'Тип АС',
+      'Відповідальний',
+      'Звання відповідального',
+      'Тел. відповідального',
+      'Імʼя ПЕОМ',
+      'WiFi MAC',
+      'ESET ProductInstanceID',
+      'Військова частина',
+      'НСЗІ звання',
+      'НСЗІ ФІО',
+      'НСЗІ тел',
+      'Політика',
+      'Мережа локальна',
+      'Чек-ліст інсталляціі',
+      'CreatedBy',
+    ]
+
+    const escapeCsv = (val: string | number | boolean | null) => {
+      const str = val === null || val === undefined ? '' : sanitizeFormulaTrigger(String(val))
+      return `"${str.replace(/"/g, '""')}"`
+    }
+
+    const csvRows = [
+      headers.map(escapeCsv).join(','),
+      ...filteredRecords.map((r) =>
+        [
+          r.id,
+          r.receivedAt,
+          r.issuedAt ?? '',
+          r.issuedToName ?? '',
+          r.issuedToPhone ?? '',
+          r.isCompleted,
+          r.subdivision,
+          r.location,
+          r.peomDescription,
+          r.network,
+          r.updateType,
+          r.securityClassification,
+          r.inventoryNumber,
+          r.asType,
+          r.responsibleName,
+          r.responsibleRank,
+          r.responsiblePhone,
+          r.hostname,
+          r.wifiMac,
+          r.esetInstanceId,
+          r.militaryUnit,
+          r.infosecRank,
+          r.infosecName,
+          r.infosecPhone,
+          r.policy,
+          r.localNetwork,
+          r.checklistCompleted,
+          r.createdBy,
+        ]
+          .map(escapeCsv)
+          .join(','),
+      ),
+    ].join('\n')
+
+    const blob = new Blob([csvRows], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `oblik-laptopiv-${new Date().toISOString().slice(0, 10)}.csv`
+    link.click()
+    URL.revokeObjectURL(url)
+  }
+
+  return (
+    <div className="workspace-shell">
+      <OperatorSessionBar
+        onSyncWithGoogleSheets={() => void handleSyncWithGoogleSheets()}
+        isSyncing={isSyncing}
+      />
+
+      <main className="workspace-main">
+        {syncBanner && (
+          <div className="sync-banner" role="status">
+            <span>{syncBanner}</span>
+            <button
+              type="button"
+              className="btn btn--ghost btn--sm"
+              onClick={() => setSyncBanner(null)}
+            >
+              Закрити
+            </button>
+          </div>
+        )}
+
+        <RegistryKpiBar records={records} />
+
+        <RegistryFilterBar
+          filters={filters}
+          dictionaries={dictionaries}
+          onUpdateFilters={handleUpdateFilters}
+          onResetFilters={handleResetFilters}
+          onOpenIntakeModal={() => setIsIntakeOpen(true)}
+          onExportCsv={handleExportCsv}
+        />
+
+        <BulkActionsBar
+          selectedIds={selectedIds}
+          dictionaries={dictionaries}
+          onApplyBulkChanges={(changes) => void handleApplyBulkChanges(changes)}
+          onClearSelection={() => setSelectedIds([])}
+        />
+
+        <RegistryGrid
+          records={filteredRecords}
+          selectedIds={selectedIds}
+          columnGroup={filters.columnGroup}
+          onToggleSelectRow={handleToggleSelectRow}
+          onToggleSelectAll={handleToggleSelectAll}
+          onOpenChecklist={(record) => setActiveChecklistRecord(record)}
+          onOpenHandover={(record) => setActiveHandoverRecord(record)}
+        />
+      </main>
+
+      <IntakeModal
+        key={isIntakeOpen ? 'open-intake' : 'closed-intake'}
+        isOpen={isIntakeOpen}
+        dictionaries={dictionaries}
+        presets={presets}
+        operatorEmail={session?.email ?? 'demo.operator@example.org'}
+        onClose={() => setIsIntakeOpen(false)}
+        onSubmitIntake={(draft) => void handleCreateIntake(draft)}
+      />
+
+      <ChecklistDrawer
+        key={activeChecklistRecord?.id ?? 'closed-checklist'}
+        record={activeChecklistRecord}
+        steps={checklistSteps}
+        onClose={() => setActiveChecklistRecord(null)}
+        onConfirmChecklist={(id, completed) => void handleConfirmChecklist(id, completed)}
+      />
+
+      <HandoverModal
+        key={activeHandoverRecord?.id ?? 'closed-handover'}
+        record={activeHandoverRecord}
+        onClose={() => setActiveHandoverRecord(null)}
+        onConfirmHandover={(id, payload) => void handleConfirmHandover(id, payload)}
+      />
+    </div>
+  )
+}
+

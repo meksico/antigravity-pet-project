@@ -360,3 +360,4 @@ Completing the 27 steps in the Checklist Drawer sets `Чек-ліст інста
 | 25 | Вимкнені всі трекінг активності під User | Standard User Privacy |
 | 26 | Доданий Chrome по замовченню під User | Standard User Setup |
 | 27 | Додана наліпка з паролем User/Admin | Physical Labeling & Handover |
+
