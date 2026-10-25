@@ -166,7 +166,13 @@ describe('Provisioning Accounting Workspace — Картки обліку ПЕО
 
     await user.click(within(drawer).getByText('Доданий SecAdmin'))
     expect(within(drawer).getByTestId('checklist-progress')).toHaveTextContent('1 з 27 (4%)')
-    await user.click(within(drawer).getByRole('button', { name: /Скинути/i }))
+    expect(
+      within(drawer).getByText(/Щоб підтвердити інсталяцію, позначте всі 27 пунктів \(26 залишилось\)/i),
+    ).toBeInTheDocument()
+    expect(
+      within(drawer).getByRole('button', { name: /Зберегти \(Скинути статус\)/i }),
+    ).toBeInTheDocument()
+    await user.click(within(drawer).getByRole('button', { name: 'Скинути' }))
     expect(within(drawer).getByTestId('checklist-progress')).toHaveTextContent('0 з 27 (0%)')
 
     await user.click(within(drawer).getByRole('button', { name: /Обрати всі/i }))

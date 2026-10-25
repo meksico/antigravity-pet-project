@@ -1424,7 +1424,7 @@
 
 .checklist-progress-fill {
   height: 100%;
-  background: #f59e0b;
+  background: #2563eb;
   border-radius: 999px;
   transition: width 160ms ease;
 }
@@ -1486,7 +1486,7 @@
   padding: 0.7rem 0.95rem;
   border-radius: 10px;
   border: 1px solid #e2e8f0;
-  background: #f8fafc;
+  background: #ffffff;
   cursor: pointer;
   transition: all 120ms ease;
 }
@@ -1498,6 +1498,11 @@
 .checklist-pill-row--checked {
   background: #f0f7ff;
   border-color: #93c5fd;
+}
+
+.checklist-pill-row:focus-within {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 1px #2563eb;
 }
 
 .checklist-pill-row__checkbox {
@@ -1518,8 +1523,13 @@
 
 .checklist-pill-row__title {
   font-size: 0.85rem;
+  font-weight: 500;
+  color: #334155;
+}
+
+.checklist-pill-row--checked .checklist-pill-row__title {
   font-weight: 700;
-  color: #1e293b;
+  color: #0f172a;
 }
 
 .checklist-modal__footer {
@@ -1564,8 +1574,6 @@
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
-  background: #059669;
-  border: 1px solid #047857;
   color: #ffffff;
   border-radius: 9px;
   padding: 0.52rem 1.1rem;
@@ -1575,8 +1583,22 @@
   font-family: inherit;
 }
 
-.btn-checklist-save:hover {
+.btn-checklist-save--complete {
+  background: #059669;
+  border: 1px solid #047857;
+}
+
+.btn-checklist-save--complete:hover {
   background: #047857;
+}
+
+.btn-checklist-save--reset {
+  background: #d97706;
+  border: 1px solid #b45309;
+}
+
+.btn-checklist-save--reset:hover {
+  background: #b45309;
 }
 
 /* Bulk Bar & Sync Banner */

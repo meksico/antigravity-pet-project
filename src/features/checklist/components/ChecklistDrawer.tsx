@@ -36,6 +36,7 @@ export function ChecklistDrawer({
 
   const totalCount = steps.length
   const completedCount = checkedNumbers.length
+  const remainingCount = Math.max(0, totalCount - completedCount)
   const percent = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0
   const isAllChecked = completedCount === totalCount && totalCount > 0
 
@@ -102,7 +103,7 @@ export function ChecklistDrawer({
               <span className="checklist-modal__progress-label">
                 Прогрес перевірки:{' '}
                 <strong
-                  className={isAllChecked ? 'text-emerald' : 'text-amber'}
+                  className={isAllChecked ? 'text-emerald' : 'text-blue'}
                   data-testid="checklist-progress"
                 >
                   {completedCount} з {totalCount} ({percent}%)
@@ -172,19 +173,22 @@ export function ChecklistDrawer({
           </ul>
         </div>
 
-        {/* Footer matching Pasted 25-10-2026 at 20.10.01.png */}
+        {/* Footer matching Pasted 25-10-2026 at 20.10.01.png & 20.11.58.png */}
         <div className="checklist-modal__footer">
           <div className="checklist-modal__status-note">
-            <CheckCircle2
-              size={16}
-              className={isAllChecked ? 'text-emerald' : 'text-muted'}
-              aria-hidden="true"
-            />
-            <span className={isAllChecked ? 'text-emerald-dark' : 'text-muted'}>
-              {isAllChecked
-                ? 'Всі пункти відмічено: після збереження статус зміниться на «Інстальований на 100%»'
-                : `Відмічено ${completedCount} з ${totalCount} пунктів чек-ліста інсталяції`}
-            </span>
+            {isAllChecked ? (
+              <>
+                <CheckCircle2 size={16} className="text-emerald" aria-hidden="true" />
+                <span className="text-emerald-dark">
+                  Всі пункти відмічено: після збереження статус зміниться на «Інстальований на 100%»
+                </span>
+              </>
+            ) : (
+              <span className="text-muted">
+                Щоб підтвердити інсталяцію, позначте всі {totalCount} пунктів ({remainingCount}{' '}
+                залишилось)
+              </span>
+            )}
           </div>
 
           <div className="checklist-modal__footer-actions">
@@ -197,14 +201,16 @@ export function ChecklistDrawer({
             </button>
             <button
               type="button"
-              className="btn-checklist-save"
+              className={`btn-checklist-save ${
+                isAllChecked ? 'btn-checklist-save--complete' : 'btn-checklist-save--reset'
+              }`}
               onClick={handleConfirm}
             >
               <Check size={16} />
               <span>
                 {isAllChecked
                   ? 'Зберегти (Інстальований на 100%)'
-                  : `Зберегти (${completedCount}/${totalCount})`}
+                  : 'Зберегти (Скинути статус)'}
               </span>
             </button>
           </div>
