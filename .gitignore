@@ -22,3 +22,9 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Sensitive data exports & environment files
+*.xlsx
+.env
+.env.*
+!.env.example
