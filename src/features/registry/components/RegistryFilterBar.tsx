@@ -1,172 +1,159 @@
-import { Download, Plus, RotateCcw, Search } from 'lucide-react'
-import type { ReferenceDictionaries } from '../../../schemas/laptopRecordSchema'
+import { ArrowUpDown, Download, Filter, RotateCcw, Search, X } from 'lucide-react'
+import { useMemo } from 'react'
+import type { LaptopRecord, ReferenceDictionaries } from '../../../schemas/laptopRecordSchema'
 
 export type StatusFilter = 'all' | 'pending' | 'completed'
 export type ColumnGroupMode = 'compact' | 'all' | 'security' | 'custodians'
+export type WorkspaceViewMode = 'cards' | 'split' | 'table'
+export type IdSortDirection = 'desc' | 'asc'
 
 export interface RegistryFiltersState {
   searchQuery: string
   status: StatusFilter
+  responsible: string
   subdivision: string
   network: string
   asType: string
   securityClassification: string
   columnGroup: ColumnGroupMode
+  sortDirection: IdSortDirection
+  viewMode: WorkspaceViewMode
 }
 
 interface RegistryFilterBarProps {
+  records: readonly LaptopRecord[]
+  filteredCount: number
   filters: RegistryFiltersState
   dictionaries: ReferenceDictionaries
   onUpdateFilters: (partial: Partial<RegistryFiltersState>) => void
   onResetFilters: () => void
-  onOpenIntakeModal: () => void
   onExportCsv: () => void
 }
 
 export function RegistryFilterBar({
+  records,
+  filteredCount,
   filters,
-  dictionaries,
   onUpdateFilters,
   onResetFilters,
-  onOpenIntakeModal,
   onExportCsv,
 }: RegistryFilterBarProps) {
+  const responsibleOptions = useMemo(() => {
+    const counts = new Map<string, number>()
+    for (const r of records) {
+      const name = r.responsibleName.trim()
+      if (name) {
+        counts.set(name, (counts.get(name) ?? 0) + 1)
+      }
+    }
+    return Array.from(counts.entries()).sort((a, b) => a[0].localeCompare(b[0], 'uk'))
+  }, [records])
+
+  const hasActiveFilters =
+    filters.searchQuery.trim() !== '' ||
+    filters.status !== 'all' ||
+    filters.responsible !== 'all' ||
+    filters.subdivision !== 'all' ||
+    filters.network !== 'all'
+
   return (
-    <section className="filter-bar" aria-label="Фільтрація та пошук записів">
-      <div className="filter-bar__top">
-        <div className="filter-bar__search">
-          <Search size={16} className="filter-bar__search-icon" aria-hidden="true" />
+    <section className="dark-toolbar" aria-label="Фільтрація, пошук та сортування">
+      <div className="dark-toolbar__row">
+        {/* Responsible Filter Dropdown matching Screenshot 2 & 14 */}
+        <div className="responsible-filter-pill">
+          <Filter size={14} className="text-orange" aria-hidden="true" />
+          <span className="responsible-filter-pill__label">Відповідальний:</span>
+          <select
+            aria-label="Фільтр відповідального"
+            className="responsible-filter-pill__select"
+            value={filters.responsible}
+            onChange={(e) => onUpdateFilters({ responsible: e.target.value })}
+          >
+            <option value="all">Всі ({records.length})</option>
+            {responsibleOptions.map(([name, count]) => (
+              <option key={name} value={name}>
+                {name} ({count})
+              </option>
+            ))}
+          </select>
+          {filters.responsible !== 'all' && (
+            <button
+              type="button"
+              className="pill-clear-btn"
+              aria-label="Очистити фільтр відповідального"
+              onClick={() => onUpdateFilters({ responsible: 'all' })}
+            >
+              <X size={13} />
+            </button>
+          )}
+        </div>
+
+        {/* Search Input matching Screenshot 1 & 3 */}
+        <div className="dark-search-box">
+          <Search size={15} className="text-orange" aria-hidden="true" />
           <input
             type="search"
-            aria-label="Пошук за Імʼям ПЕОМ, MAC, Інв.н., ФІО або ESET ID"
-            className="input filter-bar__search-input"
-            placeholder="Пошук за Імʼям ПЕОМ, MAC, Інв.н., ФІО або ESET ID..."
+            aria-label="Пошук за Імʼя ПЕОМ, Інв.н., Підрозділ"
+            className="dark-search-box__input"
+            placeholder="Пошук за Імʼя ПЕОМ, Інв.н., Підрозділ..."
             value={filters.searchQuery}
             onChange={(e) => onUpdateFilters({ searchQuery: e.target.value })}
           />
+          {filters.searchQuery && (
+            <button
+              type="button"
+              className="pill-clear-btn"
+              aria-label="Очистити пошук"
+              onClick={() => onUpdateFilters({ searchQuery: '' })}
+            >
+              <X size={14} />
+            </button>
+          )}
         </div>
 
-        <div className="filter-bar__actions">
-          <button type="button" className="btn btn--ghost btn--sm" onClick={onResetFilters}>
-            <RotateCcw size={14} />
-            <span>Скинути</span>
+        {/* ID Sort Segmented Control matching Screenshot 1 */}
+        <div className="sort-pill-box" role="group" aria-label="Сортування за ID">
+          <span className="sort-pill-box__label">
+            <ArrowUpDown size={13} className="text-orange" />
+            <span>ID:</span>
+          </span>
+          <button
+            type="button"
+            className={`sort-pill-btn ${
+              filters.sortDirection === 'desc' ? 'sort-pill-btn--active' : ''
+            }`}
+            onClick={() => onUpdateFilters({ sortDirection: 'desc' })}
+          >
+            Спадання (↓)
           </button>
-          <button type="button" className="btn btn--secondary btn--sm" onClick={onExportCsv}>
-            <Download size={14} />
+          <button
+            type="button"
+            className={`sort-pill-btn ${
+              filters.sortDirection === 'asc' ? 'sort-pill-btn--active' : ''
+            }`}
+            onClick={() => onUpdateFilters({ sortDirection: 'asc' })}
+          >
+            Зростання (↑)
+          </button>
+        </div>
+
+        {/* Utility Actions & Counter */}
+        <div className="dark-toolbar__right">
+          {hasActiveFilters && (
+            <button type="button" className="btn-header-ghost" onClick={onResetFilters}>
+              <RotateCcw size={13} />
+              <span>Скинути</span>
+            </button>
+          )}
+          <button type="button" className="btn-header-ghost" onClick={onExportCsv}>
+            <Download size={13} />
             <span>Експорт CSV</span>
           </button>
-          <button type="button" className="btn btn--primary" onClick={onOpenIntakeModal}>
-            <Plus size={16} />
-            <span>Додати лептоп</span>
-          </button>
-        </div>
-      </div>
-
-      <div className="filter-bar__selects">
-        <div className="filter-item">
-          <label htmlFor="filter-status">Статус</label>
-          <select
-            id="filter-status"
-            aria-label="Фільтр статусу"
-            className="select select--sm"
-            value={filters.status}
-            onChange={(e) => onUpdateFilters({ status: e.target.value as StatusFilter })}
-          >
-            <option value="all">Усі записи</option>
-            <option value="pending">В роботі (не видані)</option>
-            <option value="completed">Видані (_isCompleted)</option>
-          </select>
-        </div>
-
-        <div className="filter-item">
-          <label htmlFor="filter-subdivision">Підрозділ</label>
-          <select
-            id="filter-subdivision"
-            aria-label="Фільтр підрозділу"
-            className="select select--sm"
-            value={filters.subdivision}
-            onChange={(e) => onUpdateFilters({ subdivision: e.target.value })}
-          >
-            <option value="all">Усі підрозділи</option>
-            {dictionaries.subdivisions.map((item) => (
-              <option key={item} value={item}>
-                {item}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="filter-item">
-          <label htmlFor="filter-network">Мережа</label>
-          <select
-            id="filter-network"
-            aria-label="Фільтр мережі"
-            className="select select--sm"
-            value={filters.network}
-            onChange={(e) => onUpdateFilters({ network: e.target.value })}
-          >
-            <option value="all">Усі мережі</option>
-            {dictionaries.networks.map((item) => (
-              <option key={item} value={item}>
-                {item}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="filter-item">
-          <label htmlFor="filter-as-type">Тип АС</label>
-          <select
-            id="filter-as-type"
-            aria-label="Фільтр типу АС"
-            className="select select--sm"
-            value={filters.asType}
-            onChange={(e) => onUpdateFilters({ asType: e.target.value })}
-          >
-            <option value="all">Усі типи АС</option>
-            {dictionaries.asTypes.map((item) => (
-              <option key={item} value={item}>
-                {item}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="filter-item">
-          <label htmlFor="filter-classification">ГОД</label>
-          <select
-            id="filter-classification"
-            aria-label="Фільтр ГОД"
-            className="select select--sm"
-            value={filters.securityClassification}
-            onChange={(e) => onUpdateFilters({ securityClassification: e.target.value })}
-          >
-            <option value="all">Усі грифи (ГОД)</option>
-            {dictionaries.securityClassifications.map((item) => (
-              <option key={item} value={item}>
-                {item}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="filter-item">
-          <label htmlFor="filter-columns">Режим колонок</label>
-          <select
-            id="filter-columns"
-            aria-label="Режим відображення колонок"
-            className="select select--sm"
-            value={filters.columnGroup}
-            onChange={(e) => onUpdateFilters({ columnGroup: e.target.value as ColumnGroupMode })}
-          >
-            <option value="compact">Основні колонки</option>
-            <option value="all">Усі 28 колонок (A..AB)</option>
-            <option value="security">ІБ / ESET / Мережа</option>
-            <option value="custodians">Відповідальні та Видача</option>
-          </select>
+          <span className="found-counter" data-testid="found-counter">
+            Знайдено: {filteredCount} з {records.length}
+          </span>
         </div>
       </div>
     </section>
   )
 }
-

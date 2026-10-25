@@ -26,6 +26,7 @@ coverage
 
 # Sensitive data exports & environment files
 *.xlsx
+UX examples screenshots/
 .env
 .env.*
 !.env.example

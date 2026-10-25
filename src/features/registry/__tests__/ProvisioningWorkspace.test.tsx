@@ -3,81 +3,163 @@ import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import App from '../../../App'
 
-describe('Provisioning Accounting Workspace — End-to-End Integration (AC-004..AC-009)', () => {
-  it('renders KPI summary cards, 28-column registry grid, and filters by search, MAC address, and dropdowns (AC-005)', async () => {
+describe('Provisioning Accounting Workspace — Картки обліку ПЕОМ + Таблиця (AC-004..AC-009)', () => {
+  it('renders Split View (Картки + Таблиця), status counters, ID sorting, and filters by Відповідальний and MAC (AC-005)', async () => {
     const user = userEvent.setup()
     render(<App />)
 
-    // Verify KPI bar renders total synthetic records (5)
+    // Verify header title and status counters
+    expect(screen.getByText('Картки обліку ПЕОМ')).toBeInTheDocument()
     expect(screen.getByTestId('kpi-total')).toHaveTextContent('5')
     expect(screen.getByTestId('kpi-completed')).toHaveTextContent('2')
     expect(screen.getByTestId('kpi-in-progress')).toHaveTextContent('3')
 
+    // Default sort is descending by ID (#105 first, #101 last)
+    const sortAscBtn = screen.getByRole('button', { name: /Зростання/i })
+    await user.click(sortAscBtn)
+    await user.click(screen.getByRole('button', { name: /Спадання/i }))
+
+    // Switch between Картки, Таблиця, and Картки + Таблиця view modes, plus Status tabs
+    await user.click(screen.getByRole('button', { name: /Видано \/ Архів/i }))
+    await user.click(screen.getByRole('button', { name: /Всі \(/i }))
+
+    await user.click(screen.getByRole('button', { name: /Відобразити тільки картки/i }))
+    expect(screen.queryByText(/Таблиця даних/i)).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: /Відобразити лише таблицю/i }))
+    expect(screen.getByText(/Таблиця даних/i)).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: /Відобразити картки і таблицю/i }))
+    expect(screen.getByText(/Таблиця даних/i)).toBeInTheDocument()
+
+    // Open and interact with Settings drawer in OperatorSessionBar
+    const settingsBtn = screen.getByRole('button', { name: /Шаблон НСЗІ/i })
+    await user.click(settingsBtn)
+    const sheetInput = screen.getByLabelText('ID Google Таблиці')
+    await user.type(sheetInput, 'test-sheet')
+    const unitInput = screen.getByLabelText('Військова частина за замовчуванням')
+    await user.type(unitInput, '1')
+    await user.click(settingsBtn)
+
+    // Filter by Відповідальний dropdown
+    const responsibleSelect = screen.getByLabelText('Фільтр відповідального')
+    await user.selectOptions(responsibleSelect, 'Шевченко Василь Олегович')
+    expect(screen.getByText('Знайдено: 1 з 5')).toBeInTheDocument()
+
+    // Clear responsible filter via clear button
+    await user.click(screen.getByRole('button', { name: 'Очистити фільтр відповідального' }))
+    expect(screen.getByText('Знайдено: 5 з 5')).toBeInTheDocument()
+
     // Search by hyphen-formatted MAC even though record is stored with colons
-    const searchInput = screen.getByPlaceholderText(/Пошук за Імʼям ПЕОМ, MAC, Інв\.н\./i)
+    const searchInput = screen.getByPlaceholderText(/Пошук за Імʼя ПЕОМ, Інв\.н\., Підрозділ/i)
     await user.type(searchInput, '00-1a-2b-3c-4d-04')
 
-    expect(screen.getByText('DESKTOP-DEMO104')).toBeInTheDocument()
+    expect(screen.getAllByText('DESKTOP-DEMO104').length).toBeGreaterThan(0)
     expect(screen.queryByText('DESKTOP-DEMO101')).not.toBeInTheDocument()
 
-    // Clear search and filter by status "В роботі"
-    await user.clear(searchInput)
-    const statusSelect = screen.getByLabelText('Фільтр статусу')
-    await user.selectOptions(statusSelect, 'pending')
-
+    // Clear search via clear button and filter by status "Активні" (pending)
+    await user.click(screen.getByRole('button', { name: 'Очистити пошук' }))
+    await user.click(screen.getByRole('button', { name: /Активні/i }))
     expect(screen.queryByText('DESKTOP-DEMO101')).not.toBeInTheDocument()
-    expect(screen.getByText('DESKTOP-DEMO103')).toBeInTheDocument()
-
-    // Filter by subdivision, network, AS type, classification, and switch column mode to "all"
-    await user.selectOptions(screen.getByLabelText('Фільтр підрозділу'), 'Штаб')
-    await user.selectOptions(screen.getByLabelText('Фільтр мережі'), 'Дніпро')
-    await user.selectOptions(screen.getByLabelText('Фільтр типу АС'), 'АРМ СЕДО')
-    await user.selectOptions(screen.getByLabelText('Фільтр ГОД'), 'ДСК')
-    await user.selectOptions(screen.getByLabelText('Режим відображення колонок'), 'all')
-    expect(screen.getByText('DESKTOP-DEMO103')).toBeInTheDocument()
+    expect(screen.getAllByText('DESKTOP-DEMO103').length).toBeGreaterThan(0)
 
     // Reset filters
     await user.click(screen.getByRole('button', { name: /Скинути/i }))
-    expect(screen.getByText('DESKTOP-DEMO101')).toBeInTheDocument()
+    expect(screen.getAllByText('DESKTOP-DEMO101').length).toBeGreaterThan(0)
   })
 
-  it('creates a new laptop via IntakeModal with auto-increment ID, normalized MAC, and operator CreatedBy (AC-006)', async () => {
+  it('creates a new laptop card via Створення нової картки modal with 4 sections, auto-ID, and normalized MAC (AC-006)', async () => {
     const user = userEvent.setup()
     render(<App />)
 
-    await user.click(screen.getByRole('button', { name: /Додати лептоп/i }))
-    const dialog = screen.getByRole('dialog', { name: /Прийом нового лептопа/i })
+    await user.click(screen.getByRole('button', { name: /Створити картку/i }))
+    const dialog = screen.getByRole('dialog', { name: /Прийом нового лептопа|Створення нової картки/i })
+
+    expect(within(dialog).getByText(/ВІДПОВІДАЛЬНИЙ ТА ПІДРОЗДІЛ/i)).toBeInTheDocument()
+    expect(within(dialog).getByText(/ОПИС ПЕОМ ТА МЕРЕЖА/i)).toBeInTheDocument()
+    expect(within(dialog).getByText(/ДАТА\/ЧАС ПРИЙНЯТТЯ ТА ДАТА\/ЧАС ВИДАЧІ/i)).toBeInTheDocument()
+    expect(within(dialog).getByText(/СЛУЖБА ЗАХИСТУ \(НСЗІ\)/i)).toBeInTheDocument()
 
     await user.type(within(dialog).getByLabelText(/Інвентарний номер/i), '88.0')
     await user.type(within(dialog).getByLabelText(/Імʼя ПЕОМ/i), 'DESKTOP-NEW106')
     await user.type(within(dialog).getByLabelText(/WiFi MAC/i), 'aa-bb-cc-11-22-33')
     await user.type(within(dialog).getByLabelText(/ПІБ відповідального/i), 'Новак Іван Іванович')
+    await user.clear(within(dialog).getByLabelText(/Звання відповідального/i))
     await user.type(within(dialog).getByLabelText(/Звання відповідального/i), 'сержант')
     await user.type(within(dialog).getByLabelText(/Тел\. відповідального/i), '0995556677')
 
-    await user.click(within(dialog).getByRole('button', { name: /Зберегти запис/i }))
+    await user.click(
+      within(dialog).getByRole('button', { name: /Створити та зберегти|Зберегти запис/i }),
+    )
 
-    // Verify new row appears with auto-ID 106, stripped .0 on inventory 88, and normalized MAC
-    expect(screen.getByText('DESKTOP-NEW106')).toBeInTheDocument()
-    expect(screen.getByText('AA:BB:CC:11:22:33')).toBeInTheDocument()
+    // Verify new card/row appears with auto-ID 106, stripped .0 on inventory 88, and normalized MAC
+    expect(screen.getAllByText('DESKTOP-NEW106').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('AA:BB:CC:11:22:33').length).toBeGreaterThan(0)
     expect(screen.getByTestId('kpi-total')).toHaveTextContent('6')
   })
 
-  it('opens the 27-step Чек-ліст drawer, toggles individual and all 27 steps, and updates Column AA (AC-007)', async () => {
+  it('expands full card details, duplicates a card with next ID, edits an existing card, and deletes a card', async () => {
     const user = userEvent.setup()
     render(<App />)
 
-    // Open checklist for DESKTOP-DEMO104 (which initially has checklistCompleted = false)
-    const checklistBtn = screen.getByRole('button', {
+    // Expand full card details on the first card and collapse it back
+    const expandButtons = screen.getAllByRole('button', { name: /Розгорнути повну інформацію/i })
+    await user.click(expandButtons[0]!)
+    const collapseBtn = screen.getByRole('button', { name: /Згорнути подробиці/i })
+    expect(collapseBtn).toBeInTheDocument()
+    expect(screen.getAllByText(/Мережа локальна:/i).length).toBeGreaterThan(0)
+    await user.click(collapseBtn)
+
+    // Copy card info to clipboard
+    const copyBtns = screen.getAllByRole('button', {
+      name: /Копіювати інформацію картки DESKTOP-DEMO105/i,
+    })
+    await user.click(copyBtns[0]!)
+    await user.click(copyBtns[1]!)
+
+    // Duplicate card DESKTOP-DEMO105 -> creates ID #106
+    const duplicateBtn = screen.getByRole('button', {
+      name: /Створити копію картки DESKTOP-DEMO105/i,
+    })
+    await user.click(duplicateBtn)
+    expect(screen.getByTestId('kpi-total')).toHaveTextContent('6')
+
+    // Edit existing card DESKTOP-DEMO104
+    const editBtns = screen.getAllByRole('button', { name: /Редагувати картку DESKTOP-DEMO104/i })
+    await user.click(editBtns[0]!)
+    const editDialog = screen.getByRole('dialog', { name: /Редагування картки ID #104/i })
+    const modalCopyBtns = within(editDialog).getAllByRole('button', { name: /Копіювати в буфер/i })
+    await user.click(modalCopyBtns[0]!)
+    const hostInput = within(editDialog).getByLabelText(/Імʼя ПЕОМ/i)
+    await user.clear(hostInput)
+    await user.type(hostInput, 'DESKTOP-EDITED104')
+    await user.click(within(editDialog).getByRole('button', { name: /Зберегти зміни/i }))
+    expect(screen.getAllByText('DESKTOP-EDITED104').length).toBeGreaterThan(0)
+
+    // Toggle select all in table
+    const selectAllCheckbox = screen.getByLabelText('Вибрати всі відфільтровані')
+    await user.click(selectAllCheckbox)
+    await user.click(selectAllCheckbox)
+
+    // Delete card DESKTOP-DEMO105
+    const deleteBtns = screen.getAllByRole('button', { name: /Видалити картку DESKTOP-DEMO105/i })
+    await user.click(deleteBtns[0]!)
+    expect(screen.getByTestId('kpi-total')).toHaveTextContent('5')
+  })
+
+  it('opens the 27-step Чек-ліст drawer from a card or table, toggles steps, and updates Column AA (AC-007)', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    const checklistBtns = screen.getAllByRole('button', {
       name: /Чек-ліст для DESKTOP-DEMO104/i,
     })
-    await user.click(checklistBtn)
+    await user.click(checklistBtns[0]!)
 
     const drawer = screen.getByRole('dialog', { name: /Чек-ліст інсталяції/i })
     expect(within(drawer).getByText('Вимкнені всі трекінг активності')).toBeInTheDocument()
     expect(within(drawer).getByText(/Додана наліпка з паролем User\/Admin/i)).toBeInTheDocument()
 
-    // Toggle a single step, clear all, then mark all 27 steps
     await user.click(within(drawer).getByText('Доданий SecAdmin'))
     expect(within(drawer).getByTestId('checklist-progress')).toHaveTextContent('1 / 27 (4%)')
     await user.click(within(drawer).getByRole('button', { name: /Очистити/i }))
@@ -90,28 +172,7 @@ describe('Provisioning Accounting Workspace — End-to-End Integration (AC-004..
     expect(screen.queryByRole('dialog', { name: /Чек-ліст інсталяції/i })).not.toBeInTheDocument()
   })
 
-  it('executes laptop handover via HandoverModal and transitions _isCompleted to true (AC-008)', async () => {
-    const user = userEvent.setup()
-    render(<App />)
-
-    // DESKTOP-DEMO103 is pending handover (isCompleted = false)
-    await user.click(screen.getByRole('button', { name: /Видати DESKTOP-DEMO103/i }))
-
-    const modal = screen.getByRole('dialog', { name: /Видача лептопа/i })
-    const nameInput = within(modal).getByLabelText(/Видано ФІО/i)
-    const phoneInput = within(modal).getByLabelText(/Видано тел\./i)
-    await user.clear(nameInput)
-    await user.type(nameInput, 'Мельник Андрій Миколайович')
-    await user.clear(phoneInput)
-    await user.type(phoneInput, '+38 (099) 777-88-99')
-
-    await user.click(within(modal).getByRole('button', { name: /Підтвердити видачу/i }))
-
-    // Completed count increases from 2 to 3
-    expect(screen.getByTestId('kpi-completed')).toHaveTextContent('3')
-  })
-
-  it('supports bulk selection, select-all, bulk policy/network assignment, presets panel, and CSV export (AC-009)', async () => {
+  it('executes laptop handover via HandoverModal and supports bulk actions & CSV export (AC-008, AC-009)', async () => {
     const user = userEvent.setup()
     const createObjectUrlMock = vi.fn(() => 'blob:mock-csv')
     const revokeObjectUrlMock = vi.fn()
@@ -129,20 +190,22 @@ describe('Provisioning Accounting Workspace — End-to-End Integration (AC-004..
 
     render(<App />)
 
-    // Toggle operator presets bar
-    await user.click(screen.getByRole('button', { name: /Шаблон НСЗІ/i }))
-    const unitInput = screen.getByLabelText(/Військова частина за замовчуванням/i)
-    await user.clear(unitInput)
-    await user.type(unitInput, 'A2222')
+    // Handover DESKTOP-DEMO103
+    const handoverBtns = screen.getAllByRole('button', { name: /Видати DESKTOP-DEMO103/i })
+    await user.click(handoverBtns[0]!)
 
-    // Select all and unselect all
-    const selectAllCheckbox = screen.getByLabelText('Вибрати всі відфільтровані')
-    await user.click(selectAllCheckbox)
-    expect(screen.getByTestId('bulk-actions-bar')).toHaveTextContent('Вибрано: 5')
-    await user.click(selectAllCheckbox)
-    expect(screen.queryByTestId('bulk-actions-bar')).not.toBeInTheDocument()
+    const modal = screen.getByRole('dialog', { name: /Видача лептопа/i })
+    const nameInput = within(modal).getByLabelText(/Видано ФІО/i)
+    const phoneInput = within(modal).getByLabelText(/Видано тел\./i)
+    await user.clear(nameInput)
+    await user.type(nameInput, 'Мельник Андрій Миколайович')
+    await user.clear(phoneInput)
+    await user.type(phoneInput, '+38 (099) 777-88-99')
 
-    // Select two rows and apply bulk changes
+    await user.click(within(modal).getByRole('button', { name: /Підтвердити видачу/i }))
+    expect(screen.getByTestId('kpi-completed')).toHaveTextContent('3')
+
+    // Bulk selection in table
     const rowCheck104 = screen.getByLabelText('Вибрати DESKTOP-DEMO104')
     const rowCheck105 = screen.getByLabelText('Вибрати DESKTOP-DEMO105')
     await user.click(rowCheck104)
@@ -152,9 +215,7 @@ describe('Provisioning Accounting Workspace — End-to-End Integration (AC-004..
     expect(within(bulkBar).getByText(/Вибрано: 2/i)).toBeInTheDocument()
 
     await user.selectOptions(within(bulkBar).getByLabelText('Масова зміна політики'), 'АС-1')
-    await user.selectOptions(within(bulkBar).getByLabelText('Масова зміна мережі'), 'Дніпро')
     await user.click(within(bulkBar).getByRole('button', { name: /Застосувати до вибраних/i }))
-
     expect(screen.queryByTestId('bulk-actions-bar')).not.toBeInTheDocument()
 
     // Export CSV

@@ -20,18 +20,21 @@ import { ChecklistDrawer } from '../../checklist/components/ChecklistDrawer'
 import { BulkActionsBar } from './BulkActionsBar'
 import { HandoverModal } from './HandoverModal'
 import { IntakeModal } from './IntakeModal'
+import { PeomCardList } from './PeomCardList'
 import { RegistryFilterBar, type RegistryFiltersState } from './RegistryFilterBar'
 import { RegistryGrid } from './RegistryGrid'
-import { RegistryKpiBar } from './RegistryKpiBar'
 
 const INITIAL_FILTERS: RegistryFiltersState = {
   searchQuery: '',
   status: 'all',
+  responsible: 'all',
   subdivision: 'all',
   network: 'all',
   asType: 'all',
   securityClassification: 'all',
-  columnGroup: 'compact',
+  columnGroup: 'all',
+  sortDirection: 'desc',
+  viewMode: 'split',
 }
 
 export function ProvisioningWorkspace() {
@@ -44,7 +47,8 @@ export function ProvisioningWorkspace() {
   const [filters, setFilters] = useState<RegistryFiltersState>(INITIAL_FILTERS)
   const [selectedIds, setSelectedIds] = useState<readonly number[]>([])
 
-  const [isIntakeOpen, setIsIntakeOpen] = useState(false)
+  const [isCardModalOpen, setIsCardModalOpen] = useState(false)
+  const [editingRecord, setEditingRecord] = useState<LaptopRecord | null>(null)
   const [activeChecklistRecord, setActiveChecklistRecord] = useState<LaptopRecord | null>(null)
   const [activeHandoverRecord, setActiveHandoverRecord] = useState<LaptopRecord | null>(null)
   const [isSyncing, setIsSyncing] = useState(false)
@@ -59,6 +63,14 @@ export function ProvisioningWorkspace() {
     }
     return null
   }, [session?.mode, spreadsheetId, getAccessToken])
+
+  const totalCount = records.length
+  const completedCount = useMemo(() => records.filter((r) => r.isCompleted).length, [records])
+  const inProgressCount = totalCount - completedCount
+  const nextAutoId = useMemo(
+    () => records.reduce((max, r) => (r.id > max ? r.id : max), 0) + 1,
+    [records],
+  )
 
   const handleSyncWithGoogleSheets = async () => {
     if (!sheetsClient) {
@@ -85,9 +97,12 @@ export function ProvisioningWorkspace() {
     const rawQuery = filters.searchQuery.trim().toLowerCase()
     const normalizedMacQuery = normalizeMacAddress(filters.searchQuery).toLowerCase()
 
-    return records.filter((record) => {
+    const matching = records.filter((record) => {
       if (filters.status === 'completed' && !record.isCompleted) return false
       if (filters.status === 'pending' && record.isCompleted) return false
+      if (filters.responsible !== 'all' && record.responsibleName !== filters.responsible) {
+        return false
+      }
       if (filters.subdivision !== 'all' && record.subdivision !== filters.subdivision) return false
       if (filters.network !== 'all' && record.network !== filters.network) return false
       if (filters.asType !== 'all' && record.asType !== filters.asType) return false
@@ -123,6 +138,10 @@ export function ProvisioningWorkspace() {
 
       return matchesText || matchesMac
     })
+
+    return [...matching].sort((a, b) =>
+      filters.sortDirection === 'desc' ? b.id - a.id : a.id - b.id,
+    )
   }, [records, filters])
 
   const handleUpdateFilters = (partial: Partial<RegistryFiltersState>) => {
@@ -130,7 +149,20 @@ export function ProvisioningWorkspace() {
   }
 
   const handleResetFilters = () => {
-    setFilters(INITIAL_FILTERS)
+    setFilters((prev) => ({
+      ...INITIAL_FILTERS,
+      viewMode: prev.viewMode,
+    }))
+  }
+
+  const handleOpenCreateModal = () => {
+    setEditingRecord(null)
+    setIsCardModalOpen(true)
+  }
+
+  const handleOpenEditModal = (record: LaptopRecord) => {
+    setEditingRecord(record)
+    setIsCardModalOpen(true)
   }
 
   const handleCreateIntake = async (
@@ -160,6 +192,48 @@ export function ProvisioningWorkspace() {
         )
       }
     }
+  }
+
+  const handleEditRecord = async (updatedRecord: LaptopRecord) => {
+    setRecords((prev) => prev.map((r) => (r.id === updatedRecord.id ? updatedRecord : r)))
+
+    if (sheetsClient) {
+      try {
+        await sheetsClient.updateLaptopRecord(updatedRecord)
+      } catch (error) {
+        setSyncBanner(error instanceof Error ? error.message : 'Помилка збереження змін картки')
+      }
+    }
+  }
+
+  const handleDuplicateCard = async (source: LaptopRecord) => {
+    const { rowIndex: _r, id: _id, isCompleted: _c, ...draft } = source
+    await handleCreateIntake({
+      ...draft,
+      receivedAt: new Date().toISOString(),
+      issuedAt: null,
+      issuedToName: null,
+      issuedToPhone: null,
+      createdBy: session?.email ?? 'demo.operator@example.org',
+    })
+  }
+
+  const handleDeleteCard = (recordId: number) => {
+    setRecords((prev) => prev.filter((r) => r.id !== recordId))
+    setSelectedIds((prev) => prev.filter((id) => id !== recordId))
+  }
+
+  const handleCopyCardToClipboard = (record: LaptopRecord) => {
+    const text = [
+      `ID #${record.id} | Инв.н.: ${record.inventoryNumber} | ${record.hostname}`,
+      `Підрозділ: ${record.subdivision} (${record.location})`,
+      `Відповідальний: ${record.responsibleRank} ${record.responsibleName} (${record.responsiblePhone})`,
+      `Статус: ${record.isCompleted ? `Видано (${record.issuedToName ?? ''})` : 'В роботі'}`,
+      `Мережа: ${record.network} / ${record.localNetwork} | АС: ${record.asType} | ГОД: ${record.securityClassification}`,
+      `WiFi MAC: ${record.wifiMac || '—'} | ESET ID: ${record.esetInstanceId || '—'}`,
+    ].join('\n')
+    void navigator.clipboard?.writeText?.(text)
+    setSyncBanner(`Картку ID #${record.id} (${record.hostname}) скопійовано в буфер обміну`)
   }
 
   const handleConfirmChecklist = async (recordId: number, completed: boolean) => {
@@ -339,12 +413,35 @@ export function ProvisioningWorkspace() {
     URL.revokeObjectURL(url)
   }
 
+  const showCards = filters.viewMode === 'cards' || filters.viewMode === 'split'
+  const showTable = filters.viewMode === 'table' || filters.viewMode === 'split'
+
   return (
     <div className="workspace-shell">
-      <OperatorSessionBar
-        onSyncWithGoogleSheets={() => void handleSyncWithGoogleSheets()}
-        isSyncing={isSyncing}
-      />
+      <div className="dark-chrome">
+        <OperatorSessionBar
+          totalCount={totalCount}
+          inProgressCount={inProgressCount}
+          completedCount={completedCount}
+          statusFilter={filters.status}
+          viewMode={filters.viewMode}
+          onSelectStatusFilter={(status) => handleUpdateFilters({ status })}
+          onSelectViewMode={(viewMode) => handleUpdateFilters({ viewMode })}
+          onOpenCreateCard={handleOpenCreateModal}
+          onSyncWithGoogleSheets={() => void handleSyncWithGoogleSheets()}
+          isSyncing={isSyncing}
+        />
+
+        <RegistryFilterBar
+          records={records}
+          filteredCount={filteredRecords.length}
+          filters={filters}
+          dictionaries={dictionaries}
+          onUpdateFilters={handleUpdateFilters}
+          onResetFilters={handleResetFilters}
+          onExportCsv={handleExportCsv}
+        />
+      </div>
 
       <main className="workspace-main">
         {syncBanner && (
@@ -352,24 +449,13 @@ export function ProvisioningWorkspace() {
             <span>{syncBanner}</span>
             <button
               type="button"
-              className="btn btn--ghost btn--sm"
+              className="btn-footer-secondary"
               onClick={() => setSyncBanner(null)}
             >
               Закрити
             </button>
           </div>
         )}
-
-        <RegistryKpiBar records={records} />
-
-        <RegistryFilterBar
-          filters={filters}
-          dictionaries={dictionaries}
-          onUpdateFilters={handleUpdateFilters}
-          onResetFilters={handleResetFilters}
-          onOpenIntakeModal={() => setIsIntakeOpen(true)}
-          onExportCsv={handleExportCsv}
-        />
 
         <BulkActionsBar
           selectedIds={selectedIds}
@@ -378,25 +464,56 @@ export function ProvisioningWorkspace() {
           onClearSelection={() => setSelectedIds([])}
         />
 
-        <RegistryGrid
-          records={filteredRecords}
-          selectedIds={selectedIds}
-          columnGroup={filters.columnGroup}
-          onToggleSelectRow={handleToggleSelectRow}
-          onToggleSelectAll={handleToggleSelectAll}
-          onOpenChecklist={(record) => setActiveChecklistRecord(record)}
-          onOpenHandover={(record) => setActiveHandoverRecord(record)}
-        />
+        <div className={`workspace-split workspace-split--${filters.viewMode}`}>
+          {showCards && (
+            <PeomCardList
+              records={filteredRecords}
+              onOpenChecklist={(record) => setActiveChecklistRecord(record)}
+              onOpenHandover={(record) => setActiveHandoverRecord(record)}
+              onEditCard={handleOpenEditModal}
+              onDuplicateCard={(record) => void handleDuplicateCard(record)}
+              onDeleteCard={handleDeleteCard}
+              onCopyCardToClipboard={handleCopyCardToClipboard}
+            />
+          )}
+
+          {showTable && (
+            <RegistryGrid
+              records={filteredRecords}
+              selectedIds={selectedIds}
+              columnGroup={filters.columnGroup}
+              onToggleSelectRow={handleToggleSelectRow}
+              onToggleSelectAll={handleToggleSelectAll}
+              onOpenChecklist={(record) => setActiveChecklistRecord(record)}
+              onOpenHandover={(record) => setActiveHandoverRecord(record)}
+              onEditCard={handleOpenEditModal}
+              onDeleteCard={handleDeleteCard}
+              onCopyCardToClipboard={handleCopyCardToClipboard}
+            />
+          )}
+        </div>
       </main>
 
       <IntakeModal
-        key={isIntakeOpen ? 'open-intake' : 'closed-intake'}
-        isOpen={isIntakeOpen}
+        key={
+          isCardModalOpen
+            ? editingRecord
+              ? `edit-${editingRecord.id}`
+              : 'create-new'
+            : 'closed-card-modal'
+        }
+        isOpen={isCardModalOpen}
+        editingRecord={editingRecord}
+        nextAutoId={nextAutoId}
         dictionaries={dictionaries}
         presets={presets}
         operatorEmail={session?.email ?? 'demo.operator@example.org'}
-        onClose={() => setIsIntakeOpen(false)}
-        onSubmitIntake={(draft) => void handleCreateIntake(draft)}
+        onClose={() => {
+          setIsCardModalOpen(false)
+          setEditingRecord(null)
+        }}
+        onSubmitCreate={(draft) => void handleCreateIntake(draft)}
+        onSubmitEdit={(updated) => void handleEditRecord(updated)}
       />
 
       <ChecklistDrawer
@@ -416,4 +533,3 @@ export function ProvisioningWorkspace() {
     </div>
   )
 }
-
