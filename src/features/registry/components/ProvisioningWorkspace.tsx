@@ -237,9 +237,34 @@ export function ProvisioningWorkspace() {
     })
   }
 
-  const handleDeleteCard = (recordId: number) => {
-    setRecords((prev) => prev.filter((r) => r.id !== recordId))
+  const handleDeleteCard = async (recordId: number) => {
+    const target = records.find((r) => r.id === recordId)
+    setRecords((prev) =>
+      prev
+        .filter((r) => r.id !== recordId)
+        .map((r) => {
+          if (target && r.rowIndex > target.rowIndex) {
+            return { ...r, rowIndex: r.rowIndex - 1 }
+          }
+          return r
+        }),
+    )
     setSelectedIds((prev) => prev.filter((id) => id !== recordId))
+
+    if (sheetsClient && target) {
+      try {
+        await sheetsClient.deleteLaptopRecord(target)
+        setSyncBanner(
+          `Картку ID #${recordId} (${target.hostname || 'без імені'}) успішно видалено з Google Sheets`,
+        )
+      } catch (error) {
+        setSyncBanner(
+          error instanceof Error
+            ? error.message
+            : `Помилка видалення рядка картки ID #${recordId} з Google Sheets`,
+        )
+      }
+    }
   }
 
   const handleCopyCardToClipboard = (record: LaptopRecord) => {
@@ -404,7 +429,7 @@ export function ProvisioningWorkspace() {
               onOpenHandover={(record) => setActiveHandoverRecord(record)}
               onEditCard={handleOpenEditModal}
               onDuplicateCard={(record) => void handleDuplicateCard(record)}
-              onDeleteCard={handleDeleteCard}
+              onDeleteCard={(recordId) => void handleDeleteCard(recordId)}
               onCopyCardToClipboard={handleCopyCardToClipboard}
             />
           )}
@@ -419,7 +444,7 @@ export function ProvisioningWorkspace() {
               onOpenChecklist={(record) => setActiveChecklistRecord(record)}
               onOpenHandover={(record) => setActiveHandoverRecord(record)}
               onEditCard={handleOpenEditModal}
-              onDeleteCard={handleDeleteCard}
+              onDeleteCard={(recordId) => void handleDeleteCard(recordId)}
               onCopyCardToClipboard={handleCopyCardToClipboard}
             />
           )}

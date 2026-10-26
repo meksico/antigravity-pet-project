@@ -2,6 +2,14 @@ import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import App from '../../../App'
+import { AuthContext, type AuthContextValue } from '../../auth/context/AuthContext'
+import { GoogleSheetsClient } from '../../../services/sheets/sheetsClient'
+import { ProvisioningWorkspace } from '../components/ProvisioningWorkspace'
+import {
+  DEFAULT_CHECKLIST_STEPS,
+  DEFAULT_DICTIONARIES,
+  SYNTHETIC_LAPTOP_RECORDS,
+} from '../../../mocks/syntheticData'
 
 describe('Provisioning Accounting Workspace — Картки обліку ПЕОМ + Таблиця (AC-001, AC-004..AC-009)', () => {
   it('blocks workspace behind minimal AuthSplashScreen when unauthenticated and unlocks after Google authorization (AC-001)', async () => {
@@ -274,5 +282,126 @@ describe('Provisioning Accounting Workspace — Картки обліку ПЕО
     ).not.toBeInTheDocument()
 
     vi.useRealTimers()
+  })
+
+  it('calls sheetsClient.deleteLaptopRecord and shows banner when deleting a card in Google mode', async () => {
+    const user = userEvent.setup()
+    const fetchSpy = vi
+      .spyOn(GoogleSheetsClient.prototype, 'fetchWorkbookData')
+      .mockResolvedValue({
+        records: SYNTHETIC_LAPTOP_RECORDS,
+        dictionaries: DEFAULT_DICTIONARIES,
+        checklistSteps: DEFAULT_CHECKLIST_STEPS,
+      })
+    const deleteSpy = vi
+      .spyOn(GoogleSheetsClient.prototype, 'deleteLaptopRecord')
+      .mockResolvedValueOnce(undefined)
+
+    const mockAuthContext: AuthContextValue = {
+      session: {
+        email: 'operator@example.gov.ua',
+        name: 'Офіцер Безпеки',
+        mode: 'google',
+        expiresAt: Date.now() + 3600_000,
+      },
+      spreadsheetId: 'test-spreadsheet-123',
+      setSpreadsheetId: vi.fn(),
+      presets: {
+        militaryUnit: 'А0000',
+        infosecRank: 'майор',
+        infosecName: 'Петренко П.П.',
+        infosecPhone: '+380501112233',
+        defaultLocation: 'Київ',
+      },
+      updatePresets: vi.fn(),
+      getAccessToken: () => 'fake-token',
+      signInWithGoogle: vi.fn(),
+      signInDemo: vi.fn(),
+      signOut: vi.fn(),
+      authError: null,
+    }
+
+    render(
+      <AuthContext.Provider value={mockAuthContext}>
+        <ProvisioningWorkspace />
+      </AuthContext.Provider>,
+    )
+
+    const deleteBtn = await screen.findByRole('button', {
+      name: /Видалити картку DESKTOP-DEMO105/i,
+    })
+
+    await user.click(deleteBtn)
+
+    expect(deleteSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: 105,
+        hostname: 'DESKTOP-DEMO105',
+      }),
+    )
+    expect(
+      await screen.findByText(/Картку ID #105 \(DESKTOP-DEMO105\) успішно видалено з Google Sheets/i),
+    ).toBeInTheDocument()
+
+    deleteSpy.mockRestore()
+    fetchSpy.mockRestore()
+  })
+
+  it('displays error banner if deleting a card in Google Sheets fails', async () => {
+    const user = userEvent.setup()
+    const fetchSpy = vi
+      .spyOn(GoogleSheetsClient.prototype, 'fetchWorkbookData')
+      .mockResolvedValue({
+        records: SYNTHETIC_LAPTOP_RECORDS,
+        dictionaries: DEFAULT_DICTIONARIES,
+        checklistSteps: DEFAULT_CHECKLIST_STEPS,
+      })
+    const deleteSpy = vi
+      .spyOn(GoogleSheetsClient.prototype, 'deleteLaptopRecord')
+      .mockRejectedValueOnce(new Error('Помилка видалення рядка в Google Sheets'))
+
+    const mockAuthContext: AuthContextValue = {
+      session: {
+        email: 'operator@example.gov.ua',
+        name: 'Офіцер Безпеки',
+        mode: 'google',
+        expiresAt: Date.now() + 3600_000,
+      },
+      spreadsheetId: 'test-spreadsheet-123',
+      setSpreadsheetId: vi.fn(),
+      presets: {
+        militaryUnit: 'А0000',
+        infosecRank: 'майор',
+        infosecName: 'Петренко П.П.',
+        infosecPhone: '+380501112233',
+        defaultLocation: 'Київ',
+      },
+      updatePresets: vi.fn(),
+      getAccessToken: () => 'fake-token',
+      signInWithGoogle: vi.fn(),
+      signInDemo: vi.fn(),
+      signOut: vi.fn(),
+      authError: null,
+    }
+
+    render(
+      <AuthContext.Provider value={mockAuthContext}>
+        <ProvisioningWorkspace />
+      </AuthContext.Provider>,
+    )
+
+    const deleteBtn = await screen.findByRole('button', {
+      name: /Видалити картку DESKTOP-DEMO105/i,
+    })
+
+    await user.click(deleteBtn)
+
+    expect(deleteSpy).toHaveBeenCalled()
+    expect(
+      await screen.findByText(/Помилка видалення рядка в Google Sheets/i),
+    ).toBeInTheDocument()
+
+    deleteSpy.mockRestore()
+    fetchSpy.mockRestore()
   })
 })

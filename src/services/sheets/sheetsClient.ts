@@ -178,6 +178,33 @@ export class GoogleSheetsClient {
     })
   }
 
+  private registrySheetId: number | null = null
+
+  /**
+   * Fetches the numeric sheetId of 'Список звітності' from spreadsheet metadata, or falls back to 0.
+   */
+  public async getRegistrySheetId(): Promise<number> {
+    if (this.registrySheetId !== null) {
+      return this.registrySheetId
+    }
+
+    try {
+      const metadata = await this.requestJson<{
+        sheets?: Array<{ properties?: { sheetId?: number; title?: string } }>
+      }>('?fields=sheets.properties(sheetId,title)')
+
+      const target = metadata.sheets?.find(
+        (s) => s.properties?.title === REGISTRY_SHEET_NAME,
+      )
+      const id = target?.properties?.sheetId ?? 0
+      this.registrySheetId = id
+      return id
+    } catch {
+      this.registrySheetId = 0
+      return 0
+    }
+  }
+
   /**
    * Reads Column A to determine the next available row and MAX(ID) + 1, then writes disjoint ranges A..E and G..AB.
    */
@@ -219,6 +246,77 @@ export class GoogleSheetsClient {
     })
 
     return newRecord
+  }
+
+  /**
+   * Deletes the row corresponding to `record` from 'Список звітності' via deleteDimension (ROWS).
+   * Verifies the row ID matches beforehand; scans Column A if row index shifted.
+   * If the first data row (row 2) is deleted, restores the Column F array formula in F2.
+   */
+  public async deleteLaptopRecord(record: LaptopRecord): Promise<void> {
+    let targetRow = record.rowIndex
+    const idCheckRange = encodeURIComponent(`'${REGISTRY_SHEET_NAME}'!A${targetRow}`)
+    const idCheck = await this.requestJson<{ values?: unknown[][] }>(
+      `/values/${idCheckRange}?valueRenderOption=UNFORMATTED_VALUE`,
+    )
+    const actualIdStr = normalizeIntegerString(idCheck.values?.[0]?.[0])
+    const actualId = Number.parseInt(actualIdStr, 10)
+
+    if (actualId !== record.id) {
+      const colARange = encodeURIComponent(`'${REGISTRY_SHEET_NAME}'!A1:A2000`)
+      const colAData = await this.requestJson<{ values?: unknown[][] }>(
+        `/values/${colARange}?valueRenderOption=UNFORMATTED_VALUE`,
+      )
+      const rows = colAData.values ?? []
+      let foundRow = -1
+      for (let i = 1; i < rows.length; i += 1) {
+        if (Number.parseInt(normalizeIntegerString(rows[i]?.[0]), 10) === record.id) {
+          foundRow = i + 1
+          break
+        }
+      }
+      if (foundRow === -1) {
+        throw new Error(`Картку з ID #${record.id} не знайдено в таблиці Google Sheets`)
+      }
+      targetRow = foundRow
+    }
+
+    const sheetId = await this.getRegistrySheetId()
+
+    await this.requestJson(':batchUpdate', {
+      method: 'POST',
+      body: JSON.stringify({
+        requests: [
+          {
+            deleteDimension: {
+              range: {
+                sheetId,
+                dimension: 'ROWS',
+                startIndex: targetRow - 1,
+                endIndex: targetRow,
+              },
+            },
+          },
+        ],
+      }),
+    })
+
+    if (targetRow === 2) {
+      await this.requestJson(
+        `/values/${encodeURIComponent(`'${REGISTRY_SHEET_NAME}'!F2`)}?valueInputOption=USER_ENTERED`,
+        {
+          method: 'PUT',
+          body: JSON.stringify({
+            range: `'${REGISTRY_SHEET_NAME}'!F2`,
+            values: [
+              ['=IF(ROW(C2:C1024)<=MAX(ROW(C2:C1024)*(C2:C1024<>"")), C2:C1024<>"", "")'],
+            ],
+          }),
+        },
+      ).catch(() => {
+        // Non-blocking if F2 restore fails
+      })
+    }
   }
 }
 

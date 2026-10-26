@@ -195,6 +195,105 @@ describe('GoogleSheetsClient — REST API v4 Integration & Formula Safety (AC-00
     expect(created.isCompleted).toBe(false)
   })
 
+  it('deletes a row in Google Sheets via deleteDimension (ROWS) and restores F2 array formula when row 2 is deleted', async () => {
+    const calls: { url: string; body?: unknown; method?: string }[] = []
+    const mockFetch = vi.fn(async (url: string, init?: RequestInit) => {
+      calls.push({
+        url,
+        method: init?.method,
+        body: init?.body ? JSON.parse(init.body as string) : undefined,
+      })
+
+      if (url.includes('fields=sheets.properties')) {
+        return new Response(
+          JSON.stringify({
+            sheets: [
+              { properties: { sheetId: 12345, title: 'Список звітності' } },
+              { properties: { sheetId: 67890, title: '_списки' } },
+            ],
+          }),
+          { status: 200 },
+        )
+      }
+
+      if (url.includes('A2?valueRenderOption=UNFORMATTED_VALUE')) {
+        return new Response(JSON.stringify({ values: [['101']] }), { status: 200 })
+      }
+
+      return new Response(JSON.stringify({ replies: [{}] }), { status: 200 })
+    })
+
+    const client = new GoogleSheetsClient({
+      spreadsheetId: 'test-sheet-id',
+      getAccessToken: () => 'test-access-token',
+      fetchImpl: mockFetch as unknown as typeof fetch,
+    })
+
+    await client.deleteLaptopRecord(SYNTHETIC_LAPTOP_RECORDS[0]) // rowIndex: 2, id: 101
+
+    // Should have checked row A2, requested sheet metadata, called :batchUpdate deleteDimension, and restored F2
+    const batchUpdateCall = calls.find((c) => c.url.endsWith(':batchUpdate'))
+    expect(batchUpdateCall).toBeDefined()
+    expect(batchUpdateCall?.body).toEqual({
+      requests: [
+        {
+          deleteDimension: {
+            range: {
+              sheetId: 12345,
+              dimension: 'ROWS',
+              startIndex: 1, // 0-based for row 2
+              endIndex: 2,
+            },
+          },
+        },
+      ],
+    })
+
+    // Because row 2 was deleted, F2 array formula restoration call was made
+    const f2RestoreCall = calls.find((c) => c.url.includes('F2?valueInputOption=USER_ENTERED'))
+    expect(f2RestoreCall).toBeDefined()
+  })
+
+  it('scans Column A to find real row index when pre-delete check detects shifted row, and throws if missing', async () => {
+    const calls: string[] = []
+    const mockFetch = vi.fn(async (url: string) => {
+      calls.push(url)
+      const decodedUrl = decodeURIComponent(url)
+      if (decodedUrl.includes('A5?valueRenderOption=UNFORMATTED_VALUE')) {
+        // ID check on expected row returns shifted ID
+        return new Response(JSON.stringify({ values: [['999']] }), { status: 200 })
+      }
+      if (decodedUrl.includes('A1:A2000?valueRenderOption=UNFORMATTED_VALUE')) {
+        // Return column A where 104 is actually at row 3 (index 2)
+        return new Response(
+          JSON.stringify({
+            values: [['ID'], ['101'], ['104']],
+          }),
+          { status: 200 },
+        )
+      }
+      return new Response(JSON.stringify({}), { status: 200 })
+    })
+
+    const client = new GoogleSheetsClient({
+      spreadsheetId: 'test-sheet-id',
+      getAccessToken: () => 'test-access-token',
+      fetchImpl: mockFetch as unknown as typeof fetch,
+    })
+
+    const recordWithOldRowIndex = { ...SYNTHETIC_LAPTOP_RECORDS[1], id: 104, rowIndex: 5 }
+    await client.deleteLaptopRecord(recordWithOldRowIndex)
+
+    // Should have checked A5, then scanned A1:A2000, then batchUpdated row 3 (startIndex 2, endIndex 3)
+    expect(calls.some((url) => decodeURIComponent(url).includes('A1:A2000'))).toBe(true)
+
+    // And if not found in Column A, throws error
+    const recordNotFound = { ...SYNTHETIC_LAPTOP_RECORDS[1], id: 9999, rowIndex: 10 }
+    await expect(client.deleteLaptopRecord(recordNotFound)).rejects.toThrow(
+      /не знайдено в таблиці Google Sheets/i,
+    )
+  })
+
   it('throws 401 when access token is missing or API returns error status', async () => {
     const unauthClient = new GoogleSheetsClient({
       spreadsheetId: 'test-sheet-id',
