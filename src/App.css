@@ -30,10 +30,12 @@
   gap: 0.75rem;
 }
 
+.top-nav-header__controls,
 .top-nav-header__center {
   display: flex;
   align-items: center;
   gap: 0.65rem;
+  flex-wrap: wrap;
 }
 
 .brand-block {
