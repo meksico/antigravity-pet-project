@@ -344,24 +344,6 @@
   font-weight: 700;
 }
 
-.dark-toolbar__right {
-  display: flex;
-  align-items: center;
-  gap: 0.55rem;
-  margin-left: auto;
-}
-
-.found-counter {
-  font-size: 0.76rem;
-  color: #9ca3af;
-  white-space: nowrap;
-}
-
-.found-counter strong {
-  color: #3b82f6;
-  font-weight: 700;
-}
-
 /* Main Split Workspace */
 .workspace-main {
   max-width: 1760px;

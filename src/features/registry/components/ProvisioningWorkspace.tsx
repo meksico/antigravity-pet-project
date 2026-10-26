@@ -11,7 +11,6 @@ import type {
 } from '../../../schemas/laptopRecordSchema'
 import {
   normalizeMacAddress,
-  sanitizeFormulaTrigger,
 } from '../../../services/converters/normalizers'
 import { GoogleSheetsClient } from '../../../services/sheets/sheetsClient'
 import { OperatorSessionBar } from '../../auth/components/OperatorSessionBar'
@@ -155,13 +154,6 @@ export function ProvisioningWorkspace() {
 
   const handleUpdateFilters = (partial: Partial<RegistryFiltersState>) => {
     setFilters((prev) => ({ ...prev, ...partial }))
-  }
-
-  const handleResetFilters = () => {
-    setFilters((prev) => ({
-      ...INITIAL_FILTERS,
-      viewMode: prev.viewMode,
-    }))
   }
 
   const handleOpenCreateModal = () => {
@@ -338,90 +330,6 @@ export function ProvisioningWorkspace() {
     }
   }
 
-  const handleExportCsv = () => {
-    const headers = [
-      'ID',
-      'Дата/час прийняття',
-      'Дата/час видачі',
-      'Видано ФІО',
-      'Видано тел.',
-      '_isCompleted',
-      'Підрозділ',
-      'Місцезнаходження',
-      'Опис ПЕОМ',
-      'Мережа',
-      'Тип оновлення',
-      'ГОД',
-      'Инв.н.',
-      'Тип АС',
-      'Відповідальний',
-      'Звання відповідального',
-      'Тел. відповідального',
-      'Імʼя ПЕОМ',
-      'WiFi MAC',
-      'ESET ProductInstanceID',
-      'Військова частина',
-      'НСЗІ звання',
-      'НСЗІ ФІО',
-      'НСЗІ тел',
-      'Політика',
-      'Мережа локальна',
-      'Чек-ліст інсталляціі',
-      'CreatedBy',
-    ]
-
-    const escapeCsv = (val: string | number | boolean | null) => {
-      const str = val === null || val === undefined ? '' : sanitizeFormulaTrigger(String(val))
-      return `"${str.replace(/"/g, '""')}"`
-    }
-
-    const csvRows = [
-      headers.map(escapeCsv).join(','),
-      ...filteredRecords.map((r) =>
-        [
-          r.id,
-          r.receivedAt,
-          r.issuedAt ?? '',
-          r.issuedToName ?? '',
-          r.issuedToPhone ?? '',
-          r.isCompleted,
-          r.subdivision,
-          r.location,
-          r.peomDescription,
-          r.network,
-          r.updateType,
-          r.securityClassification,
-          r.inventoryNumber,
-          r.asType,
-          r.responsibleName,
-          r.responsibleRank,
-          r.responsiblePhone,
-          r.hostname,
-          r.wifiMac,
-          r.esetInstanceId,
-          r.militaryUnit,
-          r.infosecRank,
-          r.infosecName,
-          r.infosecPhone,
-          r.policy,
-          r.localNetwork,
-          r.checklistCompleted,
-          r.createdBy,
-        ]
-          .map(escapeCsv)
-          .join(','),
-      ),
-    ].join('\n')
-
-    const blob = new Blob([csvRows], { type: 'text/csv;charset=utf-8;' })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    link.download = `oblik-laptopiv-${new Date().toISOString().slice(0, 10)}.csv`
-    link.click()
-    URL.revokeObjectURL(url)
-  }
-
   const showCards = filters.viewMode === 'cards' || filters.viewMode === 'split'
   const showTable = filters.viewMode === 'table' || filters.viewMode === 'split'
 
@@ -443,12 +351,9 @@ export function ProvisioningWorkspace() {
 
         <RegistryFilterBar
           records={records}
-          filteredCount={filteredRecords.length}
           filters={filters}
           dictionaries={dictionaries}
           onUpdateFilters={handleUpdateFilters}
-          onResetFilters={handleResetFilters}
-          onExportCsv={handleExportCsv}
         />
       </div>
 

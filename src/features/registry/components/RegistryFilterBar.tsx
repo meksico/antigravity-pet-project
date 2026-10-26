@@ -1,4 +1,4 @@
-import { ArrowUpDown, Download, Filter, RotateCcw, Search, X } from 'lucide-react'
+import { ArrowUpDown, Filter, Search, X } from 'lucide-react'
 import { useMemo } from 'react'
 import type { LaptopRecord, ReferenceDictionaries } from '../../../schemas/laptopRecordSchema'
 
@@ -22,21 +22,15 @@ export interface RegistryFiltersState {
 
 interface RegistryFilterBarProps {
   records: readonly LaptopRecord[]
-  filteredCount: number
   filters: RegistryFiltersState
   dictionaries: ReferenceDictionaries
   onUpdateFilters: (partial: Partial<RegistryFiltersState>) => void
-  onResetFilters: () => void
-  onExportCsv: () => void
 }
 
 export function RegistryFilterBar({
   records,
-  filteredCount,
   filters,
   onUpdateFilters,
-  onResetFilters,
-  onExportCsv,
 }: RegistryFilterBarProps) {
   const responsibleOptions = useMemo(() => {
     const counts = new Map<string, number>()
@@ -48,13 +42,6 @@ export function RegistryFilterBar({
     }
     return Array.from(counts.entries()).sort((a, b) => a[0].localeCompare(b[0], 'uk'))
   }, [records])
-
-  const hasActiveFilters =
-    filters.searchQuery.trim() !== '' ||
-    filters.status !== 'all' ||
-    filters.responsible !== 'all' ||
-    filters.subdivision !== 'all' ||
-    filters.network !== 'all'
 
   return (
     <section className="dark-toolbar" aria-label="Фільтрація, пошук та сортування">
@@ -135,23 +122,6 @@ export function RegistryFilterBar({
           >
             Зростання (↑)
           </button>
-        </div>
-
-        {/* Utility Actions & Counter */}
-        <div className="dark-toolbar__right">
-          {hasActiveFilters && (
-            <button type="button" className="btn-header-ghost" onClick={onResetFilters}>
-              <RotateCcw size={13} />
-              <span>Скинути</span>
-            </button>
-          )}
-          <button type="button" className="btn-header-ghost" onClick={onExportCsv}>
-            <Download size={13} />
-            <span>Експорт CSV</span>
-          </button>
-          <span className="found-counter" data-testid="found-counter">
-            Знайдено: {filteredCount} з {records.length}
-          </span>
         </div>
       </div>
     </section>

@@ -1,6 +1,6 @@
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import App from '../../../App'
 
 describe('Provisioning Accounting Workspace — Картки обліку ПЕОМ + Таблиця (AC-001, AC-004..AC-009)', () => {
@@ -73,11 +73,12 @@ describe('Provisioning Accounting Workspace — Картки обліку ПЕО
     // Filter by Відповідальний dropdown
     const responsibleSelect = screen.getByLabelText('Фільтр відповідального')
     await user.selectOptions(responsibleSelect, 'Шевченко Василь Олегович')
-    expect(screen.getByText('Знайдено: 1 з 5')).toBeInTheDocument()
+    expect(screen.getAllByText('DESKTOP-DEMO104').length).toBeGreaterThan(0)
+    expect(screen.queryByText('DESKTOP-DEMO101')).not.toBeInTheDocument()
 
     // Clear responsible filter via clear button
     await user.click(screen.getByRole('button', { name: 'Очистити фільтр відповідального' }))
-    expect(screen.getByText('Знайдено: 5 з 5')).toBeInTheDocument()
+    expect(screen.getAllByText('DESKTOP-DEMO101').length).toBeGreaterThan(0)
 
     // Search by hyphen-formatted MAC even though record is stored with colons
     const searchInput = screen.getByPlaceholderText(/Пошук за Імʼя ПЕОМ, Інв\.н\., Підрозділ/i)
@@ -92,8 +93,8 @@ describe('Provisioning Accounting Workspace — Картки обліку ПЕО
     expect(screen.queryByText('DESKTOP-DEMO101')).not.toBeInTheDocument()
     expect(screen.getAllByText('DESKTOP-DEMO103').length).toBeGreaterThan(0)
 
-    // Reset filters
-    await user.click(screen.getByRole('button', { name: /Скинути/i }))
+    // Switch back to "Всі" status filter
+    await user.click(screen.getByRole('button', { name: /Всі/i }))
     expect(screen.getAllByText('DESKTOP-DEMO101').length).toBeGreaterThan(0)
   })
 
@@ -214,21 +215,8 @@ describe('Provisioning Accounting Workspace — Картки обліку ПЕО
     expect(screen.queryByRole('dialog', { name: /Перевірка інсталяції/i })).not.toBeInTheDocument()
   })
 
-  it('executes laptop handover via HandoverModal and supports bulk actions & CSV export (AC-008, AC-009)', async () => {
+  it('executes laptop handover via HandoverModal and supports bulk actions (AC-008, AC-009)', async () => {
     const user = userEvent.setup()
-    const createObjectUrlMock = vi.fn(() => 'blob:mock-csv')
-    const revokeObjectUrlMock = vi.fn()
-    Object.defineProperty(URL, 'createObjectURL', {
-      writable: true,
-      value: createObjectUrlMock,
-    })
-    Object.defineProperty(URL, 'revokeObjectURL', {
-      writable: true,
-      value: revokeObjectUrlMock,
-    })
-    const anchorClickSpy = vi
-      .spyOn(HTMLAnchorElement.prototype, 'click')
-      .mockImplementation(() => undefined)
 
     render(<App initialDemoSession={true} />)
 
@@ -259,11 +247,5 @@ describe('Provisioning Accounting Workspace — Картки обліку ПЕО
     await user.selectOptions(within(bulkBar).getByLabelText('Масова зміна політики'), 'АС-1')
     await user.click(within(bulkBar).getByRole('button', { name: /Застосувати до вибраних/i }))
     expect(screen.queryByTestId('bulk-actions-bar')).not.toBeInTheDocument()
-
-    // Export CSV
-    await user.click(screen.getByRole('button', { name: /Експорт CSV/i }))
-    expect(createObjectUrlMock).toHaveBeenCalledTimes(1)
-
-    anchorClickSpy.mockRestore()
   })
 })
