@@ -93,6 +93,19 @@ export function ProvisioningWorkspace() {
     }
   }, [sheetsClient, handleSyncWithGoogleSheets])
 
+  // Automatically dismiss notifier banner after 3 seconds
+  useEffect(() => {
+    if (!syncBanner) {
+      return
+    }
+    const timer = window.setTimeout(() => {
+      setSyncBanner(null)
+    }, 3000)
+    return () => {
+      window.clearTimeout(timer)
+    }
+  }, [syncBanner])
+
   const totalCount = records.length
   const completedCount = useMemo(() => records.filter((r) => r.isCompleted).length, [records])
   const inProgressCount = totalCount - completedCount

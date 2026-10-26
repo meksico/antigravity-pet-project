@@ -1,6 +1,6 @@
-import { render, screen, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import App from '../../../App'
 
 describe('Provisioning Accounting Workspace — Картки обліку ПЕОМ + Таблиця (AC-001, AC-004..AC-009)', () => {
@@ -247,5 +247,30 @@ describe('Provisioning Accounting Workspace — Картки обліку ПЕО
     await user.selectOptions(within(bulkBar).getByLabelText('Масова зміна політики'), 'АС-1')
     await user.click(within(bulkBar).getByRole('button', { name: /Застосувати до вибраних/i }))
     expect(screen.queryByTestId('bulk-actions-bar')).not.toBeInTheDocument()
+  })
+
+  it('automatically dismisses notifier banner after 3 seconds', () => {
+    vi.useFakeTimers()
+    render(<App initialDemoSession={true} />)
+
+    const copyBtn = screen.getAllByRole('button', {
+      name: /Копіювати інформацію картки DESKTOP-DEMO105/i,
+    })[0]!
+    fireEvent.click(copyBtn)
+
+    expect(
+      screen.getByText(/Картку ID #105 \(DESKTOP-DEMO105\) скопійовано в буфер обміну/i),
+    ).toBeInTheDocument()
+
+    // Advance time by 3 seconds
+    act(() => {
+      vi.advanceTimersByTime(3000)
+    })
+
+    expect(
+      screen.queryByText(/Картку ID #105 \(DESKTOP-DEMO105\) скопійовано в буфер обміну/i),
+    ).not.toBeInTheDocument()
+
+    vi.useRealTimers()
   })
 })
