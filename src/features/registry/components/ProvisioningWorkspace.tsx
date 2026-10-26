@@ -12,6 +12,7 @@ import type {
 import {
   normalizeMacAddress,
 } from '../../../services/converters/normalizers'
+import { formatCardClipboardText } from '../../../services/converters/cardClipboardFormatter'
 import { GoogleSheetsClient } from '../../../services/sheets/sheetsClient'
 import { OperatorSessionBar } from '../../auth/components/OperatorSessionBar'
 import { useAuth } from '../../auth/hooks/useAuth'
@@ -307,16 +308,9 @@ export function ProvisioningWorkspace() {
   }
 
   const handleCopyCardToClipboard = (record: LaptopRecord) => {
-    const text = [
-      `ID #${record.id} | Инв.н.: ${record.inventoryNumber} | ${record.hostname}`,
-      `Підрозділ: ${record.subdivision} (${record.location})`,
-      `Відповідальний: ${record.responsibleRank} ${record.responsibleName} (${record.responsiblePhone})`,
-      `Статус: ${record.isCompleted ? `Видано (${record.issuedToName ?? ''})` : 'В роботі'}`,
-      `Мережа: ${record.network} / ${record.localNetwork} | АС: ${record.asType} | ГОД: ${record.securityClassification}`,
-      `WiFi MAC: ${record.wifiMac || '—'} | ESET ID: ${record.esetInstanceId || '—'}`,
-    ].join('\n')
+    const text = formatCardClipboardText(record)
     void navigator.clipboard?.writeText?.(text)
-    setSyncBanner(`Картку ID #${record.id} (${record.hostname}) скопійовано в буфер обміну`)
+    setSyncBanner(`Картку ID #${record.id} (${record.hostname || 'без імені'}) скопійовано в буфер обміну`)
   }
 
   const handleConfirmChecklist = async (recordId: number, completed: boolean) => {

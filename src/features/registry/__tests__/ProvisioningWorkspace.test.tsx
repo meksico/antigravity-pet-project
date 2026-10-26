@@ -284,6 +284,37 @@ describe('Provisioning Accounting Workspace — Картки обліку ПЕО
     vi.useRealTimers()
   })
 
+  it('copies card details to clipboard using the standardized 7-line template', async () => {
+    const user = userEvent.setup()
+    const writeTextMock = vi.fn().mockResolvedValue(undefined)
+    Object.defineProperty(navigator, 'clipboard', {
+      value: {
+        writeText: writeTextMock,
+      },
+      configurable: true,
+      writable: true,
+    })
+
+    render(<App initialDemoSession={true} />)
+
+    const copyBtn = screen.getAllByRole('button', {
+      name: /Копіювати інформацію картки DESKTOP-DEMO105/i,
+    })[0]!
+
+    await user.click(copyBtn)
+
+    expect(writeTextMock).toHaveBeenCalledTimes(1)
+    const copiedText = writeTextMock.mock.calls[0][0] as string
+
+    expect(copiedText).toContain('Мережа: Автономна')
+    expect(copiedText).toContain("Ім'я комп'ютера: DESKTOP-DEMO105")
+    expect(copiedText).toContain('—')
+    expect(copiedText).toContain('ProductInstanceID: 11111111-2222-4333-8444-555555555505')
+    expect(copiedText).toContain('Військова частина: A0000')
+    expect(copiedText).toContain('Користувач АРМ: майор Ткаченко Ігор Вікторович 0991002005')
+    expect(copiedText).toContain('НСЗІ старший лейтенант Сидоренко І.В. 0999008000')
+  })
+
   it('calls sheetsClient.deleteLaptopRecord and shows banner when deleting a card in Google mode', async () => {
     const user = userEvent.setup()
     const fetchSpy = vi

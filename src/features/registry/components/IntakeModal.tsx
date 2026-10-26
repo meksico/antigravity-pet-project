@@ -6,6 +6,7 @@ import {
   type ReferenceDictionaries,
 } from '../../../schemas/laptopRecordSchema'
 import { normalizePhone } from '../../../services/converters/normalizers'
+import { formatCardClipboardText } from '../../../services/converters/cardClipboardFormatter'
 import type { OperatorPresets } from '../../auth/context/AuthContext'
 
 interface IntakeModalProps {
@@ -193,14 +194,7 @@ export function IntakeModal({
   }
 
   const handleCopyModalToClipboard = () => {
-    const summary = [
-      `ID #${displayId} | Инв.н.: ${form.inventoryNumber} | ${form.hostname}`,
-      `Підрозділ: ${form.subdivision} (${form.location})`,
-      `Відповідальний: ${form.responsibleRank} ${form.responsibleName} (${form.responsiblePhone})`,
-      `Мережа: ${form.network} / ${form.localNetwork} | Тип АС: ${form.asType} | ГОД: ${form.securityClassification}`,
-      `WiFi MAC: ${form.wifiMac || '—'} | ESET ID: ${form.esetInstanceId || '—'}`,
-      `НСЗІ: ${form.infosecRank} ${form.infosecName} (${form.infosecPhone})`,
-    ].join('\n')
+    const summary = formatCardClipboardText(form)
     void navigator.clipboard?.writeText?.(summary)
     setCopiedFeedback(true)
   }
