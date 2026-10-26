@@ -42,7 +42,6 @@ export function OperatorSessionBar({
   const {
     session,
     spreadsheetId,
-    setSpreadsheetId,
     presets,
     updatePresets,
     signInWithGoogle,
@@ -173,15 +172,15 @@ export function OperatorSessionBar({
         >
           <div className="drawer-settings-grid">
             <div className="form-field-dark">
-              <label htmlFor="spreadsheet-id-input">ID Google Таблиці</label>
+              <label htmlFor="spreadsheet-id-input">ID Google Таблиці (фіксовано з конфігурації)</label>
               <div className="inline-input-row">
                 <input
                   id="spreadsheet-id-input"
                   type="text"
-                  className="input-dark"
-                  placeholder="Spreadsheet ID"
+                  className="input-dark input-dark--readonly"
+                  readOnly
+                  placeholder="Не задано в VITE_SPREADSHEET_ID"
                   value={spreadsheetId}
-                  onChange={(e) => setSpreadsheetId(e.target.value)}
                   aria-label="ID Google Таблиці"
                 />
                 {session?.mode === 'google' && spreadsheetId && onSyncWithGoogleSheets && (

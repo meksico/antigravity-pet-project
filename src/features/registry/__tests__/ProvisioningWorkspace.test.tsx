@@ -67,7 +67,7 @@ describe('Provisioning Accounting Workspace — Картки обліку ПЕО
     const settingsBtn = screen.getByRole('button', { name: /Шаблон НСЗІ/i })
     await user.click(settingsBtn)
     const sheetInput = screen.getByLabelText('ID Google Таблиці')
-    await user.type(sheetInput, 'test-sheet')
+    expect(sheetInput).toHaveAttribute('readonly')
     const unitInput = screen.getByLabelText('Військова частина за замовчуванням')
     await user.type(unitInput, '1')
     await user.click(settingsBtn)

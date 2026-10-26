@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   DEFAULT_CHECKLIST_STEPS,
   DEFAULT_DICTIONARIES,
@@ -53,6 +53,7 @@ export function ProvisioningWorkspace() {
   const [activeHandoverRecord, setActiveHandoverRecord] = useState<LaptopRecord | null>(null)
   const [isSyncing, setIsSyncing] = useState(false)
   const [syncBanner, setSyncBanner] = useState<string | null>(null)
+  const hasAutoSyncedRef = useRef(false)
 
   const sheetsClient = useMemo(() => {
     if (session?.mode === 'google' && spreadsheetId.trim()) {
@@ -64,15 +65,7 @@ export function ProvisioningWorkspace() {
     return null
   }, [session?.mode, spreadsheetId, getAccessToken])
 
-  const totalCount = records.length
-  const completedCount = useMemo(() => records.filter((r) => r.isCompleted).length, [records])
-  const inProgressCount = totalCount - completedCount
-  const nextAutoId = useMemo(
-    () => records.reduce((max, r) => (r.id > max ? r.id : max), 0) + 1,
-    [records],
-  )
-
-  const handleSyncWithGoogleSheets = async () => {
+  const handleSyncWithGoogleSheets = useCallback(async () => {
     if (!sheetsClient) {
       return
     }
@@ -91,7 +84,23 @@ export function ProvisioningWorkspace() {
     } finally {
       setIsSyncing(false)
     }
-  }
+  }, [sheetsClient])
+
+  // Automatically sync with the configured Google Spreadsheet upon Google login
+  useEffect(() => {
+    if (sheetsClient && !hasAutoSyncedRef.current) {
+      hasAutoSyncedRef.current = true
+      void handleSyncWithGoogleSheets()
+    }
+  }, [sheetsClient, handleSyncWithGoogleSheets])
+
+  const totalCount = records.length
+  const completedCount = useMemo(() => records.filter((r) => r.isCompleted).length, [records])
+  const inProgressCount = totalCount - completedCount
+  const nextAutoId = useMemo(
+    () => records.reduce((max, r) => (r.id > max ? r.id : max), 0) + 1,
+    [records],
+  )
 
   const filteredRecords = useMemo(() => {
     const rawQuery = filters.searchQuery.trim().toLowerCase()
