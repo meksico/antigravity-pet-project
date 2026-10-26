@@ -30,3 +30,4 @@ UX examples screenshots/
 .env
 .env.*
 !.env.example
+keys-and-ids.txt

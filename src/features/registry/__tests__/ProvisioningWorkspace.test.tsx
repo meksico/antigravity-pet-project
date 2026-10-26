@@ -3,10 +3,37 @@ import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import App from '../../../App'
 
-describe('Provisioning Accounting Workspace — Картки обліку ПЕОМ + Таблиця (AC-004..AC-009)', () => {
-  it('renders Split View (Картки + Таблиця), status counters, ID sorting, and filters by Відповідальний and MAC (AC-005)', async () => {
+describe('Provisioning Accounting Workspace — Картки обліку ПЕОМ + Таблиця (AC-001, AC-004..AC-009)', () => {
+  it('blocks workspace behind AuthSplashScreen when unauthenticated and unlocks after authorization (AC-001)', async () => {
     const user = userEvent.setup()
     render(<App />)
+
+    // Unauthenticated users ONLY see the splash screen; workspace is not rendered
+    expect(screen.getByTestId('auth-splash-screen')).toBeInTheDocument()
+    expect(screen.queryByTestId('kpi-total')).not.toBeInTheDocument()
+    expect(screen.queryByText(/Таблиця даних/i)).not.toBeInTheDocument()
+
+    // Clicking Google Sign-In in jsdom displays an auth error on the splash screen
+    await user.click(screen.getByRole('button', { name: /Авторизуватися через Google/i }))
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      /VITE_GOOGLE_CLIENT_ID|Google Identity Services \(GIS\) скрипт ще не завантажено/i,
+    )
+
+    // Authorize session -> unlocks the working view
+    await user.click(screen.getByRole('button', { name: /Увійти в Демо-режим/i }))
+    expect(screen.queryByTestId('auth-splash-screen')).not.toBeInTheDocument()
+    expect(screen.getByTestId('kpi-total')).toHaveTextContent('5')
+
+    // Signing out from the header drawer returns immediately to the splash screen
+    await user.click(screen.getByRole('button', { name: /Шаблон НСЗІ/i }))
+    await user.click(screen.getByRole('button', { name: /Вийти з сесії/i }))
+    expect(screen.getByTestId('auth-splash-screen')).toBeInTheDocument()
+    expect(screen.queryByTestId('kpi-total')).not.toBeInTheDocument()
+  })
+
+  it('renders Split View (Картки + Таблиця), status counters, ID sorting, and filters by Відповідальний and MAC (AC-005)', async () => {
+    const user = userEvent.setup()
+    render(<App initialDemoSession={true} />)
 
     // Verify header title and status counters
     expect(screen.getByText('Картки обліку ПЕОМ')).toBeInTheDocument()
@@ -70,7 +97,7 @@ describe('Provisioning Accounting Workspace — Картки обліку ПЕО
 
   it('creates a new laptop card via Створення нової картки modal with 4 sections, auto-ID, and normalized MAC (AC-006)', async () => {
     const user = userEvent.setup()
-    render(<App />)
+    render(<App initialDemoSession={true} />)
 
     await user.click(screen.getByRole('button', { name: /Створити картку/i }))
     const dialog = screen.getByRole('dialog', { name: /Прийом нового лептопа|Створення нової картки/i })
@@ -100,7 +127,7 @@ describe('Provisioning Accounting Workspace — Картки обліку ПЕО
 
   it('expands full card details, duplicates a card with next ID, edits an existing card, and deletes a card', async () => {
     const user = userEvent.setup()
-    render(<App />)
+    render(<App initialDemoSession={true} />)
 
     // Expand full card details on the first card and collapse it back
     const expandButtons = screen.getAllByRole('button', { name: /Розгорнути повну інформацію/i })
@@ -149,7 +176,7 @@ describe('Provisioning Accounting Workspace — Картки обліку ПЕО
 
   it('opens the 27-step Перевірка інсталяції modal from a card or table, toggles steps, and updates Column AA (AC-007)', async () => {
     const user = userEvent.setup()
-    render(<App />)
+    render(<App initialDemoSession={true} />)
 
     const checklistBtns = screen.getAllByRole('button', {
       name: /Чек-ліст для DESKTOP-DEMO104/i,
@@ -201,7 +228,7 @@ describe('Provisioning Accounting Workspace — Картки обліку ПЕО
       .spyOn(HTMLAnchorElement.prototype, 'click')
       .mockImplementation(() => undefined)
 
-    render(<App />)
+    render(<App initialDemoSession={true} />)
 
     // Handover DESKTOP-DEMO103
     const handoverBtns = screen.getAllByRole('button', { name: /Видати DESKTOP-DEMO103/i })

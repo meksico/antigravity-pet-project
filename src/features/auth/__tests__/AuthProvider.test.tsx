@@ -74,7 +74,9 @@ describe('AuthProvider — In-Memory OAuth Token & Operator Attribution (AC-001,
     expect(screen.getByTestId('sheet')).toHaveTextContent('sheet-123')
 
     await user.click(screen.getByText('Google Sign In'))
-    expect(screen.getByTestId('err')).toHaveTextContent(/VITE_GOOGLE_CLIENT_ID/i)
+    expect(screen.getByTestId('err')).toHaveTextContent(
+      /VITE_GOOGLE_CLIENT_ID|Google Identity Services \(GIS\) скрипт ще не завантажено/i,
+    )
 
     await user.click(screen.getByText('Sign Out'))
     expect(screen.getByTestId('email')).toHaveTextContent('anonymous')
