@@ -1730,22 +1730,7 @@
   font-weight: 700;
   padding: 0.25rem 0.65rem;
   border-radius: 999px;
-  margin-bottom: 0.85rem;
-}
-
-.auth-splash-card__title {
-  margin: 0 0 0.5rem;
-  font-size: 1.45rem;
-  font-weight: 800;
-  color: #ffffff;
-  letter-spacing: -0.02em;
-}
-
-.auth-splash-card__subtitle {
-  margin: 0 0 1.5rem;
-  font-size: 0.84rem;
-  line-height: 1.5;
-  color: #9ca3af;
+  margin-bottom: 1.25rem;
 }
 
 .auth-splash-card__alert {
@@ -1787,36 +1772,6 @@
 
 .btn-splash-primary:hover {
   background: var(--brand-orange-hover);
-}
-
-.btn-splash-secondary {
-  width: 100%;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.45rem;
-  background: #222631;
-  color: #d1d5db;
-  border: 1px solid #374151;
-  border-radius: 10px;
-  padding: 0.65rem 1rem;
-  font-size: 0.8rem;
-  font-weight: 600;
-  cursor: pointer;
-  font-family: inherit;
-  transition: all 120ms ease;
-}
-
-.btn-splash-secondary:hover {
-  background: #2c313f;
-  color: #ffffff;
-}
-
-.auth-splash-card__footnote {
-  margin: 1.35rem 0 0;
-  font-size: 0.72rem;
-  line-height: 1.4;
-  color: #6b7280;
 }
 
 .empty-card-state,

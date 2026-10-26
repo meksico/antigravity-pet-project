@@ -4,24 +4,28 @@ import { describe, expect, it, vi } from 'vitest'
 import App from '../../../App'
 
 describe('Provisioning Accounting Workspace — Картки обліку ПЕОМ + Таблиця (AC-001, AC-004..AC-009)', () => {
-  it('blocks workspace behind AuthSplashScreen when unauthenticated and unlocks after authorization (AC-001)', async () => {
+  it('blocks workspace behind minimal AuthSplashScreen when unauthenticated and unlocks after Google authorization (AC-001)', async () => {
     const user = userEvent.setup()
     render(<App />)
 
-    // Unauthenticated users ONLY see the splash screen; workspace is not rendered
-    expect(screen.getByTestId('auth-splash-screen')).toBeInTheDocument()
+    // Unauthenticated users ONLY see the minimal splash screen; workspace is not rendered
+    const splash = screen.getByTestId('auth-splash-screen')
+    expect(splash).toBeInTheDocument()
+    expect(within(splash).getByText(/Доступ обмежено • Потрібна авторизація/i)).toBeInTheDocument()
     expect(screen.queryByTestId('kpi-total')).not.toBeInTheDocument()
     expect(screen.queryByText(/Таблиця даних/i)).not.toBeInTheDocument()
 
     // Clicking Google Sign-In in jsdom displays an auth error on the splash screen
-    await user.click(screen.getByRole('button', { name: /Авторизуватися через Google/i }))
+    await user.click(within(splash).getByRole('button', { name: /Авторизуватися через Google/i }))
     expect(screen.getByRole('alert')).toHaveTextContent(
       /VITE_GOOGLE_CLIENT_ID|Google Identity Services \(GIS\) скрипт ще не завантажено/i,
     )
+  })
 
-    // Authorize session -> unlocks the working view
-    await user.click(screen.getByRole('button', { name: /Увійти в Демо-режим/i }))
-    expect(screen.queryByTestId('auth-splash-screen')).not.toBeInTheDocument()
+  it('returns to AuthSplashScreen when signing out from an active session (AC-001)', async () => {
+    const user = userEvent.setup()
+    render(<App initialDemoSession={true} />)
+
     expect(screen.getByTestId('kpi-total')).toHaveTextContent('5')
 
     // Signing out from the header drawer returns immediately to the splash screen
