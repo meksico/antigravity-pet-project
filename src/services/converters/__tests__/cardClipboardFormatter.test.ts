@@ -72,3 +72,4 @@ describe('Card Clipboard Formatter', () => {
     expect(formatCardClipboardText(partialCard)).toBe(expected)
   })
 })
+

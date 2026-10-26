@@ -55,3 +55,4 @@ export function formatCardClipboardText(card: CardClipboardFields): string {
     `НСЗІ ${infosec}`,
   ].join('\n')
 }
+
