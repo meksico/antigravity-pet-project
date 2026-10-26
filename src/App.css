@@ -1681,6 +1681,175 @@
   color: #92400e;
 }
 
+/* User Avatar & Profile Popup */
+.user-profile-menu {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.user-avatar-btn {
+  position: relative;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  color: #111318;
+  border: 2px solid #2e3440;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 0.78rem;
+  cursor: pointer;
+  padding: 0;
+  transition: transform 120ms ease, border-color 120ms ease;
+}
+
+.user-avatar-btn:hover,
+.user-avatar-btn[aria-expanded='true'] {
+  transform: scale(1.05);
+  border-color: #f59e0b;
+}
+
+.user-avatar-initials {
+  letter-spacing: -0.03em;
+}
+
+.user-avatar-status-dot {
+  position: absolute;
+  bottom: -1px;
+  right: -1px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #10b981;
+  border: 2px solid #111318;
+}
+
+.user-profile-popup {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 290px;
+  background: #181b22;
+  border: 1px solid #2e3440;
+  border-radius: 14px;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.45);
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: popup-fade-in 120ms ease-out;
+}
+
+@keyframes popup-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.user-profile-popup__header {
+  padding: 1rem 1rem 0.85rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  border-bottom: 1px solid #262a34;
+}
+
+.user-profile-popup__avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #f59e0b;
+  color: #111318;
+  font-size: 0.88rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.user-profile-popup__details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.user-profile-popup__name {
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.user-profile-popup__email {
+  font-size: 0.76rem;
+  color: #9ca3af;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.user-profile-popup__meta {
+  padding: 0.65rem 1rem;
+  background: #13151b;
+  border-bottom: 1px solid #262a34;
+}
+
+.user-profile-mode-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: #10b981;
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+.user-profile-popup__footer {
+  padding: 0.65rem 0.8rem;
+  background: #181b22;
+}
+
+.btn-profile-logout {
+  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  background: #232733;
+  border: 1px solid #374151;
+  color: #f87171;
+  border-radius: 8px;
+  padding: 0.48rem 0.8rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 120ms ease;
+}
+
+.btn-profile-logout:hover {
+  background: #450a0a;
+  border-color: #dc2626;
+  color: #fecaca;
+}
+
 /* Auth Splash Screen (Unauthenticated Gate) */
 .auth-splash-backdrop {
   min-height: 100vh;

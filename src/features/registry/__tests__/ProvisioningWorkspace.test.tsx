@@ -22,14 +22,22 @@ describe('Provisioning Accounting Workspace — Картки обліку ПЕО
     )
   })
 
-  it('returns to AuthSplashScreen when signing out from an active session (AC-001)', async () => {
+  it('returns to AuthSplashScreen when signing out from avatar popup (AC-001)', async () => {
     const user = userEvent.setup()
     render(<App initialDemoSession={true} />)
 
     expect(screen.getByTestId('kpi-total')).toHaveTextContent('5')
 
-    // Signing out from the header bar returns immediately to the splash screen
-    await user.click(screen.getByRole('button', { name: /Вийти з сесії/i }))
+    // Click avatar button to open user popup
+    const avatarBtn = screen.getByRole('button', { name: /Профіль оператора/i })
+    await user.click(avatarBtn)
+
+    // Verify popup shows operator email and name
+    const popup = screen.getByRole('dialog', { name: /Інформація про оператора/i })
+    expect(within(popup).getByText('demo.operator@example.org')).toBeInTheDocument()
+
+    // Clicking logout closes session and returns immediately to the splash screen
+    await user.click(within(popup).getByRole('button', { name: /Вийти з сесії/i }))
     expect(screen.getByTestId('auth-splash-screen')).toBeInTheDocument()
     expect(screen.queryByTestId('kpi-total')).not.toBeInTheDocument()
   })

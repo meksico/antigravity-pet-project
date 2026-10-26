@@ -1,12 +1,16 @@
 import {
+  CheckCircle2,
   Columns2,
   Laptop,
   LayoutGrid,
   LogOut,
+  Mail,
   Plus,
   RefreshCw,
   Table2,
+  User,
 } from 'lucide-react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { useAuth } from '../hooks/useAuth'
 import type { StatusFilter, WorkspaceViewMode } from '../../registry/components/RegistryFilterBar'
 
@@ -36,6 +40,44 @@ export function OperatorSessionBar({
   isSyncing = false,
 }: OperatorSessionBarProps) {
   const { session, signOut, authError } = useAuth()
+  const [isProfileOpen, setIsProfileOpen] = useState(false)
+  const profileRef = useRef<HTMLDivElement>(null)
+  const popupId = useId()
+
+  // Close profile popup when clicking outside or pressing Escape
+  useEffect(() => {
+    if (!isProfileOpen) return
+
+    const handlePointerDown = (event: MouseEvent) => {
+      if (profileRef.current && !profileRef.current.contains(event.target as Node)) {
+        setIsProfileOpen(false)
+      }
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsProfileOpen(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handlePointerDown)
+    window.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown)
+      window.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [isProfileOpen])
+
+  // Generate 2-letter initials for avatar badge
+  const initials = (() => {
+    if (!session) return '?'
+    const raw = session.name || session.email || ''
+    const parts = raw.trim().split(/\s+/)
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[1][0]).toUpperCase()
+    }
+    return raw.slice(0, 2).toUpperCase() || 'OP'
+  })()
 
   return (
     <header className="top-nav-header">
@@ -81,7 +123,7 @@ export function OperatorSessionBar({
           </button>
         </div>
 
-        {/* Right Controls: View Switcher + Session actions + Create CTA */}
+        {/* Right Controls: View Switcher + Sync + Create CTA + User Avatar */}
         <div className="top-nav-header__actions">
           <div className="segmented-group" role="group" aria-label="Режим відображення">
             <button
@@ -130,19 +172,6 @@ export function OperatorSessionBar({
             </button>
           )}
 
-          {session && (
-            <button
-              type="button"
-              className="btn-header-ghost"
-              onClick={signOut}
-              title={`Вийти з сесії (${session.email})`}
-              aria-label="Вийти з сесії"
-            >
-              <LogOut size={14} />
-              <span>Вийти</span>
-            </button>
-          )}
-
           <button
             type="button"
             className="btn-orange-cta"
@@ -151,6 +180,76 @@ export function OperatorSessionBar({
             <Plus size={16} />
             <span>Створити картку</span>
           </button>
+
+          {/* User Avatar with Profile Popup */}
+          {session && (
+            <div className="user-profile-menu" ref={profileRef}>
+              <button
+                type="button"
+                className="user-avatar-btn"
+                onClick={() => setIsProfileOpen((prev) => !prev)}
+                aria-expanded={isProfileOpen}
+                aria-haspopup="dialog"
+                aria-controls={popupId}
+                aria-label={`Профіль оператора: ${session.name || session.email}`}
+                title={`Профіль: ${session.name || session.email}`}
+              >
+                <span className="user-avatar-initials">{initials}</span>
+                <span className="user-avatar-status-dot" aria-hidden="true" />
+              </button>
+
+              {isProfileOpen && (
+                <div
+                  id={popupId}
+                  className="user-profile-popup"
+                  role="dialog"
+                  aria-label="Інформація про оператора"
+                >
+                  <div className="user-profile-popup__header">
+                    <div className="user-profile-popup__avatar" aria-hidden="true">
+                      {initials}
+                    </div>
+                    <div className="user-profile-popup__details">
+                      <div className="user-profile-popup__name" title={session.name}>
+                        <User size={13} className="text-muted" aria-hidden="true" />
+                        <span>{session.name || 'Оператор'}</span>
+                      </div>
+                      <div className="user-profile-popup__email" title={session.email}>
+                        <Mail size={13} className="text-muted" aria-hidden="true" />
+                        <span>{session.email}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="user-profile-popup__meta">
+                    <span className="user-profile-mode-badge">
+                      <CheckCircle2 size={12} aria-hidden="true" />
+                      <span>
+                        {session.mode === 'google'
+                          ? 'Google OAuth 2.0 авторизовано'
+                          : 'Демо-сесія (синтетичні дані)'}
+                      </span>
+                    </span>
+                  </div>
+
+                  <div className="user-profile-popup__footer">
+                    <button
+                      type="button"
+                      className="btn-profile-logout"
+                      onClick={() => {
+                        setIsProfileOpen(false)
+                        signOut()
+                      }}
+                      aria-label="Вийти з сесії"
+                    >
+                      <LogOut size={14} />
+                      <span>Вийти з акаунту</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
