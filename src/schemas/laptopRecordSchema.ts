@@ -167,7 +167,7 @@ export function parseSheetRowToLaptopRecord(
 }
 
 /**
- * Reference Dictionaries from '_списки' (Columns A..I)
+ * Reference Dictionaries from '_списки' (Columns A..J)
  */
 export interface ReferenceDictionaries {
   networks: string[] // A: Мережа
@@ -179,6 +179,7 @@ export interface ReferenceDictionaries {
   peomDescriptions: string[] // G: Опис ПЕОМ
   militaryUnits: string[] // H: Військова частина
   policies: string[] // I: Політика
+  ranks: string[] // J: Звання
 }
 
 export function parseDictionariesSheet(rawRows: unknown[][]): ReferenceDictionaries {
@@ -205,6 +206,7 @@ export function parseDictionariesSheet(rawRows: unknown[][]): ReferenceDictionar
     peomDescriptions: extractColumn(6),
     militaryUnits: extractColumn(7),
     policies: extractColumn(8),
+    ranks: extractColumn(9),
   }
 }
 

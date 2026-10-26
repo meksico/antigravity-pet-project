@@ -49,7 +49,7 @@ describe('GoogleSheetsClient — REST API v4 Integration & Formula Safety (AC-00
               ],
             },
             {
-              range: "'_списки'!A1:I25",
+              range: "'_списки'!A1:J100",
               values: [
                 [
                   'Мережа',
@@ -61,6 +61,7 @@ describe('GoogleSheetsClient — REST API v4 Integration & Formula Safety (AC-00
                   'Опис ПЕОМ',
                   'Військова частина',
                   'Політика',
+                  'Звання',
                 ],
                 [
                   'Інтернет',
@@ -72,6 +73,7 @@ describe('GoogleSheetsClient — REST API v4 Integration & Formula Safety (AC-00
                   'Робочий',
                   'A0000',
                   'АС-1',
+                  'Солдат',
                 ],
               ],
             },

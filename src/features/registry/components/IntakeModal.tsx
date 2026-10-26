@@ -1,5 +1,5 @@
 import { Calendar, Check, Copy, Laptop, Pencil, Plus, Shield, User, X } from 'lucide-react'
-import { type ChangeEvent, type FormEvent, useEffect, useState } from 'react'
+import { type ChangeEvent, type FormEvent, useEffect, useMemo, useState } from 'react'
 import {
   intakeFormSchema,
   type LaptopRecord,
@@ -58,6 +58,12 @@ export function IntakeModal({
   onSubmitCreate,
   onSubmitEdit,
 }: IntakeModalProps) {
+  const matchCanonicalRank = (rank: string) => {
+    if (!rank) return ''
+    const match = dictionaries.ranks.find((r) => r.toLowerCase() === rank.toLowerCase())
+    return match ?? rank
+  }
+
   const [form, setForm] = useState<CardModalFormState>(() => {
     if (editingRecord) {
       return {
@@ -74,13 +80,13 @@ export function IntakeModal({
         inventoryNumber: editingRecord.inventoryNumber,
         asType: editingRecord.asType,
         responsibleName: editingRecord.responsibleName,
-        responsibleRank: editingRecord.responsibleRank,
+        responsibleRank: matchCanonicalRank(editingRecord.responsibleRank),
         responsiblePhone: editingRecord.responsiblePhone,
         hostname: editingRecord.hostname,
         wifiMac: editingRecord.wifiMac,
         esetInstanceId: editingRecord.esetInstanceId,
         militaryUnit: editingRecord.militaryUnit,
-        infosecRank: editingRecord.infosecRank,
+        infosecRank: matchCanonicalRank(editingRecord.infosecRank),
         infosecName: editingRecord.infosecName,
         infosecPhone: editingRecord.infosecPhone,
         policy: editingRecord.policy,
@@ -102,19 +108,45 @@ export function IntakeModal({
       inventoryNumber: '',
       asType: dictionaries.asTypes[1] ?? 'ІСД-І',
       responsibleName: '',
-      responsibleRank: 'головний сержант',
+      responsibleRank: matchCanonicalRank('Солдат') || dictionaries.ranks[0] || 'Солдат',
       responsiblePhone: '',
       hostname: '',
       wifiMac: '',
       esetInstanceId: '',
       militaryUnit: presets.militaryUnit,
-      infosecRank: presets.infosecRank,
+      infosecRank:
+        matchCanonicalRank(presets.infosecRank) ||
+        matchCanonicalRank('Майор') ||
+        dictionaries.ranks[0] ||
+        'Майор',
       infosecName: presets.infosecName,
       infosecPhone: presets.infosecPhone,
       policy: dictionaries.policies[3] ?? 'AC-3 Light (тільки парольна політика)',
       localNetwork: 'ІСД-Інтернет',
     }
   })
+
+  const responsibleRankOptions = useMemo(() => {
+    const list = [...dictionaries.ranks]
+    if (
+      form.responsibleRank &&
+      !list.some((r) => r.toLowerCase() === form.responsibleRank.toLowerCase())
+    ) {
+      list.unshift(form.responsibleRank)
+    }
+    return list
+  }, [dictionaries.ranks, form.responsibleRank])
+
+  const infosecRankOptions = useMemo(() => {
+    const list = [...dictionaries.ranks]
+    if (
+      form.infosecRank &&
+      !list.some((r) => r.toLowerCase() === form.infosecRank.toLowerCase())
+    ) {
+      list.unshift(form.infosecRank)
+    }
+    return list
+  }, [dictionaries.ranks, form.infosecRank])
 
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [copiedFeedback, setCopiedFeedback] = useState(false)
@@ -301,16 +333,21 @@ export function IntakeModal({
 
               <div className="col-span-4 form-field-light">
                 <label htmlFor="intake-resp-rank">Звання відповідального</label>
-                <input
+                <select
                   id="intake-resp-rank"
                   name="responsibleRank"
-                  type="text"
-                  className="input-light"
-                  placeholder="сержант"
+                  className="select-light"
                   value={form.responsibleRank}
                   onChange={handleFieldChange}
                   required
-                />
+                >
+                  <option value="">— Оберіть звання —</option>
+                  {responsibleRankOptions.map((item) => (
+                    <option key={item} value={item}>
+                      {item}
+                    </option>
+                  ))}
+                </select>
               </div>
               <div className="col-span-4 form-field-light">
                 <label htmlFor="intake-resp-phone">Тел. відповідального</label>
@@ -608,14 +645,21 @@ export function IntakeModal({
             <div className="modal-grid-12">
               <div className="col-span-4 form-field-light">
                 <label htmlFor="intake-infosec-rank">НСЗІ звання</label>
-                <input
+                <select
                   id="intake-infosec-rank"
                   name="infosecRank"
-                  type="text"
-                  className="input-light"
+                  className="select-light"
                   value={form.infosecRank}
                   onChange={handleFieldChange}
-                />
+                  required
+                >
+                  <option value="">— Оберіть звання —</option>
+                  {infosecRankOptions.map((item) => (
+                    <option key={item} value={item}>
+                      {item}
+                    </option>
+                  ))}
+                </select>
               </div>
               <div className="col-span-4 form-field-light">
                 <label htmlFor="intake-infosec-name">НСЗІ ФІО</label>

@@ -122,9 +122,9 @@ describe('Provisioning Accounting Workspace — Картки обліку ПЕО
     await user.type(within(dialog).getByLabelText(/Імʼя ПЕОМ/i), 'DESKTOP-NEW106')
     await user.type(within(dialog).getByLabelText(/WiFi MAC/i), 'aa-bb-cc-11-22-33')
     await user.type(within(dialog).getByLabelText(/ПІБ відповідального/i), 'Новак Іван Іванович')
-    await user.clear(within(dialog).getByLabelText(/Звання відповідального/i))
-    await user.type(within(dialog).getByLabelText(/Звання відповідального/i), 'сержант')
+    await user.selectOptions(within(dialog).getByLabelText(/Звання відповідального/i), 'Сержант')
     await user.type(within(dialog).getByLabelText(/Тел\. відповідального/i), '0995556677')
+    await user.selectOptions(within(dialog).getByLabelText(/НСЗІ звання/i), 'Майор')
 
     await user.click(
       within(dialog).getByRole('button', { name: /Створити та зберегти|Зберегти запис/i }),
