@@ -147,12 +147,14 @@ describe('Provisioning Accounting Workspace — Картки обліку ПЕО
     await user.click(copyBtns[0]!)
     await user.click(copyBtns[1]!)
 
-    // Duplicate card DESKTOP-DEMO105 -> creates ID #106
+    // Duplicate card DESKTOP-DEMO105 -> creates incremental ID #106 with empty device fields
     const duplicateBtn = screen.getByRole('button', {
       name: /Створити копію картки DESKTOP-DEMO105/i,
     })
     await user.click(duplicateBtn)
     expect(screen.getByTestId('kpi-total')).toHaveTextContent('6')
+    expect(screen.getByText('ID #106')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Редагувати картку #106/i })).toBeInTheDocument()
 
     // Edit existing card DESKTOP-DEMO104
     const editBtns = screen.getAllByRole('button', { name: /Редагувати картку DESKTOP-DEMO104/i })

@@ -153,7 +153,7 @@ export function RegistryGrid({
                         <button
                           type="button"
                           className="btn-handover-inline"
-                          aria-label={`Видати ${record.hostname}`}
+                          aria-label={`Видати ${record.hostname || `#${record.id}`}`}
                           onClick={() => onOpenHandover(record)}
                         >
                           <Clock size={12} />
@@ -168,12 +168,12 @@ export function RegistryGrid({
                     <td className="cell-nowrap">{record.network}</td>
                     <td className="cell-nowrap">{record.updateType}</td>
                     <td className="cell-nowrap">{record.securityClassification}</td>
-                    <td className="cell-mono">{record.inventoryNumber}</td>
+                    <td className="cell-mono">{record.inventoryNumber || '—'}</td>
                     <td className="cell-nowrap">{record.asType}</td>
                     <td className="cell-nowrap cell-strong">{record.responsibleName}</td>
                     <td className="cell-nowrap">{record.responsibleRank}</td>
                     <td className="cell-mono cell-nowrap">{record.responsiblePhone || '—'}</td>
-                    <td className="cell-mono cell-strong">{record.hostname}</td>
+                    <td className="cell-mono cell-strong">{record.hostname || '—'}</td>
                     <td className="cell-mono cell-nowrap">{record.wifiMac || '—'}</td>
                     <td className="cell-mono cell-truncate" title={record.esetInstanceId}>
                       {record.esetInstanceId || '—'}

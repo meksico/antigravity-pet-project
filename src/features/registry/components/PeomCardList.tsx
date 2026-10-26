@@ -99,7 +99,7 @@ export function PeomCardList({
                       type="button"
                       className="icon-btn"
                       title="Копіювати інформацію картки в буфер обміну"
-                      aria-label={`Копіювати інформацію картки ${record.hostname}`}
+                      aria-label={`Копіювати інформацію картки ${record.hostname || `#${record.id}`}`}
                       onClick={() => onCopyCardToClipboard(record)}
                     >
                       <Copy size={15} />
@@ -108,7 +108,7 @@ export function PeomCardList({
                       type="button"
                       className="icon-btn"
                       title="Редагувати картку"
-                      aria-label={`Редагувати картку ${record.hostname}`}
+                      aria-label={`Редагувати картку ${record.hostname || `#${record.id}`}`}
                       onClick={() => onEditCard(record)}
                     >
                       <Pencil size={15} />
@@ -117,7 +117,7 @@ export function PeomCardList({
                       type="button"
                       className="icon-btn icon-btn--danger"
                       title="Видалити картку"
-                      aria-label={`Видалити картку ${record.hostname}`}
+                      aria-label={`Видалити картку ${record.hostname || `#${record.id}`}`}
                       onClick={() => onDeleteCard(record.id)}
                     >
                       <Trash2 size={15} />
@@ -132,7 +132,7 @@ export function PeomCardList({
                     <strong className="summary-box__value">
                       {formatDisplayDateTime(record.receivedAt)}
                     </strong>
-                    <span className="summary-box__hostname">{record.hostname}</span>
+                    <span className="summary-box__hostname">{record.hostname || '—'}</span>
                   </div>
 
                   <div className="summary-box summary-box--blue">
@@ -168,7 +168,7 @@ export function PeomCardList({
                       <button
                         type="button"
                         className="btn-handover-inline"
-                        aria-label={`Видати ${record.hostname}`}
+                        aria-label={`Видати ${record.hostname || `#${record.id}`}`}
                         onClick={() => onOpenHandover(record)}
                       >
                         <Send size={12} />
@@ -201,7 +201,7 @@ export function PeomCardList({
                       : 'checklist-bar--pending'
                   }`}
                   title="Переглянути або редагувати чек-ліст інсталяції"
-                  aria-label={`Чек-ліст для ${record.hostname}`}
+                  aria-label={`Чек-ліст для ${record.hostname || `#${record.id}`}`}
                   onClick={() => onOpenChecklist(record)}
                 >
                   <span className="checklist-bar__left">
@@ -311,7 +311,7 @@ export function PeomCardList({
                       type="button"
                       className="footer-link-btn"
                       title="Створити копію картки з наступним доступним ID"
-                      aria-label={`Створити копію картки ${record.hostname}`}
+                      aria-label={`Створити копію картки ${record.hostname || `#${record.id}`}`}
                       onClick={() => onDuplicateCard(record)}
                     >
                       <CopyPlus size={14} />

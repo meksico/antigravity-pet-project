@@ -224,11 +224,16 @@ export function ProvisioningWorkspace() {
     const { rowIndex: _r, id: _id, isCompleted: _c, ...draft } = source
     await handleCreateIntake({
       ...draft,
-      receivedAt: new Date().toISOString(),
-      issuedAt: null,
-      issuedToName: null,
-      issuedToPhone: null,
-      createdBy: session?.email ?? 'demo.operator@example.org',
+      hostname: '',
+      inventoryNumber: '',
+      wifiMac: '',
+      esetInstanceId: '',
+      receivedAt: source.receivedAt || new Date().toISOString(),
+      issuedAt: source.issuedAt,
+      issuedToName: source.issuedToName,
+      issuedToPhone: source.issuedToPhone,
+      checklistCompleted: source.checklistCompleted,
+      createdBy: session?.email ?? source.createdBy ?? 'demo.operator@example.org',
     })
   }
 
