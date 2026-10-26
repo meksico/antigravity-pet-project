@@ -1,16 +1,12 @@
 import {
   Columns2,
-  KeyRound,
   Laptop,
   LayoutGrid,
-  LogIn,
   LogOut,
   Plus,
-  Settings2,
+  RefreshCw,
   Table2,
 } from 'lucide-react'
-import { type ChangeEvent, useState } from 'react'
-import type { OperatorPresets } from '../context/AuthContext'
 import { useAuth } from '../hooks/useAuth'
 import type { StatusFilter, WorkspaceViewMode } from '../../registry/components/RegistryFilterBar'
 
@@ -39,23 +35,7 @@ export function OperatorSessionBar({
   onSyncWithGoogleSheets,
   isSyncing = false,
 }: OperatorSessionBarProps) {
-  const {
-    session,
-    spreadsheetId,
-    presets,
-    updatePresets,
-    signInWithGoogle,
-    signInDemo,
-    signOut,
-    authError,
-  } = useAuth()
-
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false)
-
-  const handlePresetChange = (event: ChangeEvent<HTMLInputElement>) => {
-    const field = event.target.name as keyof OperatorPresets
-    updatePresets({ [field]: event.target.value })
-  }
+  const { session, signOut, authError } = useAuth()
 
   return (
     <header className="top-nav-header">
@@ -101,7 +81,7 @@ export function OperatorSessionBar({
           </button>
         </div>
 
-        {/* Right Controls: View Switcher + Settings + Create CTA */}
+        {/* Right Controls: View Switcher + Session actions + Create CTA */}
         <div className="top-nav-header__actions">
           <div className="segmented-group" role="group" aria-label="Режим відображення">
             <button
@@ -136,16 +116,32 @@ export function OperatorSessionBar({
             </button>
           </div>
 
-          <button
-            type="button"
-            className="btn-header-ghost"
-            onClick={() => setIsSettingsOpen((prev) => !prev)}
-            aria-expanded={isSettingsOpen}
-            title="Налаштування Google Sheets та шаблону НСЗІ"
-          >
-            <Settings2 size={15} />
-            <span>Шаблон НСЗІ ({presets.militaryUnit})</span>
-          </button>
+          {session?.mode === 'google' && onSyncWithGoogleSheets && (
+            <button
+              type="button"
+              className="btn-header-ghost"
+              onClick={onSyncWithGoogleSheets}
+              disabled={isSyncing}
+              title="Синхронізувати з Google Sheets"
+              aria-label="Оновити дані з Google Sheets"
+            >
+              <RefreshCw size={14} className={isSyncing ? 'spin' : ''} />
+              <span>{isSyncing ? 'Синхронізація...' : 'Синхронізувати'}</span>
+            </button>
+          )}
+
+          {session && (
+            <button
+              type="button"
+              className="btn-header-ghost"
+              onClick={signOut}
+              title={`Вийти з сесії (${session.email})`}
+              aria-label="Вийти з сесії"
+            >
+              <LogOut size={14} />
+              <span>Вийти</span>
+            </button>
+          )}
 
           <button
             type="button"
@@ -161,139 +157,6 @@ export function OperatorSessionBar({
       {authError && (
         <div className="top-nav-header__alert" role="alert">
           {authError}
-        </div>
-      )}
-
-      {isSettingsOpen && (
-        <div
-          className="top-nav-header__drawer"
-          role="region"
-          aria-label="Налаштування Google Sheets та шаблону НСЗІ"
-        >
-          <div className="drawer-settings-grid">
-            <div className="form-field-dark">
-              <label htmlFor="spreadsheet-id-input">ID Google Таблиці (фіксовано з конфігурації)</label>
-              <div className="inline-input-row">
-                <input
-                  id="spreadsheet-id-input"
-                  type="text"
-                  className="input-dark input-dark--readonly"
-                  readOnly
-                  placeholder="Не задано в VITE_SPREADSHEET_ID"
-                  value={spreadsheetId}
-                  aria-label="ID Google Таблиці"
-                />
-                {session?.mode === 'google' && spreadsheetId && onSyncWithGoogleSheets && (
-                  <button
-                    type="button"
-                    className="btn-header-ghost"
-                    onClick={onSyncWithGoogleSheets}
-                    disabled={isSyncing}
-                  >
-                    {isSyncing ? 'Синхронізація...' : 'Оновити'}
-                  </button>
-                )}
-              </div>
-            </div>
-
-            <div className="form-field-dark">
-              <label htmlFor="preset-unit">Військова частина за замовчуванням</label>
-              <input
-                id="preset-unit"
-                name="militaryUnit"
-                type="text"
-                className="input-dark"
-                value={presets.militaryUnit}
-                onChange={handlePresetChange}
-              />
-            </div>
-
-            <div className="form-field-dark">
-              <label htmlFor="preset-rank">НСЗІ звання</label>
-              <input
-                id="preset-rank"
-                name="infosecRank"
-                type="text"
-                className="input-dark"
-                value={presets.infosecRank}
-                onChange={handlePresetChange}
-              />
-            </div>
-
-            <div className="form-field-dark">
-              <label htmlFor="preset-name">НСЗІ ФІО</label>
-              <input
-                id="preset-name"
-                name="infosecName"
-                type="text"
-                className="input-dark"
-                value={presets.infosecName}
-                onChange={handlePresetChange}
-              />
-            </div>
-
-            <div className="form-field-dark">
-              <label htmlFor="preset-phone">НСЗІ телефон</label>
-              <input
-                id="preset-phone"
-                name="infosecPhone"
-                type="text"
-                className="input-dark"
-                value={presets.infosecPhone}
-                onChange={handlePresetChange}
-              />
-            </div>
-
-            <div className="form-field-dark">
-              <label>Сесія оператора</label>
-              <div className="inline-input-row">
-                {session ? (
-                  <>
-                    <span className="operator-chip" data-testid="active-operator-email">
-                      {session.email} ({session.mode === 'google' ? 'Google OAuth' : 'Демо'})
-                    </span>
-                    {session.mode === 'demo' && (
-                      <button
-                        type="button"
-                        className="btn-header-ghost"
-                        onClick={() => void signInWithGoogle()}
-                      >
-                        <KeyRound size={13} />
-                        <span>Google OAuth</span>
-                      </button>
-                    )}
-                    <button
-                      type="button"
-                      className="btn-header-ghost"
-                      onClick={signOut}
-                      aria-label="Вийти з сесії"
-                    >
-                      <LogOut size={13} />
-                      <span>Вийти</span>
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <button
-                      type="button"
-                      className="btn-header-ghost"
-                      onClick={() => void signInWithGoogle()}
-                    >
-                      <LogIn size={13} />
-                      <span>Увійти через Google</span>
-                    </button>
-                    <button
-                      type="button"
-                      className="btn-header-ghost"
-                      onClick={() => signInDemo('demo.operator@example.org')}
-                    >
-                      <span>Демо-сесія</span>
-                    </button>
-                  </>
-                )}
-              </div>
-            </div>
-          </div>
         </div>
       )}
     </header>

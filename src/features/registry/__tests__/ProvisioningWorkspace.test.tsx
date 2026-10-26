@@ -28,8 +28,7 @@ describe('Provisioning Accounting Workspace — Картки обліку ПЕО
 
     expect(screen.getByTestId('kpi-total')).toHaveTextContent('5')
 
-    // Signing out from the header drawer returns immediately to the splash screen
-    await user.click(screen.getByRole('button', { name: /Шаблон НСЗІ/i }))
+    // Signing out from the header bar returns immediately to the splash screen
     await user.click(screen.getByRole('button', { name: /Вийти з сесії/i }))
     expect(screen.getByTestId('auth-splash-screen')).toBeInTheDocument()
     expect(screen.queryByTestId('kpi-total')).not.toBeInTheDocument()
@@ -62,15 +61,6 @@ describe('Provisioning Accounting Workspace — Картки обліку ПЕО
 
     await user.click(screen.getByRole('button', { name: /Відобразити картки і таблицю/i }))
     expect(screen.getByText(/Таблиця даних/i)).toBeInTheDocument()
-
-    // Open and interact with Settings drawer in OperatorSessionBar
-    const settingsBtn = screen.getByRole('button', { name: /Шаблон НСЗІ/i })
-    await user.click(settingsBtn)
-    const sheetInput = screen.getByLabelText('ID Google Таблиці')
-    expect(sheetInput).toHaveAttribute('readonly')
-    const unitInput = screen.getByLabelText('Військова частина за замовчуванням')
-    await user.type(unitInput, '1')
-    await user.click(settingsBtn)
 
     // Filter by Відповідальний dropdown
     const responsibleSelect = screen.getByLabelText('Фільтр відповідального')
