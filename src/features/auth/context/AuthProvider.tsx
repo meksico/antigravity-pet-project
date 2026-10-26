@@ -1,9 +1,22 @@
-import { type ReactNode, useCallback, useMemo, useRef, useState } from 'react'
+import {
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react'
 import {
   AuthContext,
   type OperatorPresets,
   type OperatorSession,
 } from './AuthContext'
+import {
+  AUTH_STORAGE_KEY,
+  clearStoredAuth,
+  loadStoredAuth,
+  saveStoredAuth,
+} from './authStorage'
 
 interface GoogleTokenResponse {
   access_token?: string
@@ -55,20 +68,26 @@ interface AuthProviderProps {
 
 /**
  * Google Identity Services (GIS) OAuth 2.0 Provider (AC-001, ADR-0002).
- * Access tokens are held strictly in a volatile useRef closure in memory — never in localStorage or sessionStorage.
+ * Persists session and access token in localStorage so user session survives page refreshes.
  */
 export function AuthProvider({ children, initialDemoSession = false }: AuthProviderProps) {
-  const tokenRef = useRef<string | null>(initialDemoSession ? 'demo-ephemeral-token' : null)
-  const [session, setSession] = useState<OperatorSession | null>(
-    initialDemoSession
-      ? {
+  const initialAuth = useMemo(() => {
+    if (initialDemoSession) {
+      return {
+        token: 'demo-ephemeral-token',
+        session: {
           email: 'demo.operator@example.org',
           name: 'Демо Оператор (ЦРЦТіЦ)',
-          mode: 'demo',
+          mode: 'demo' as const,
           expiresAt: null,
-        }
-      : null,
-  )
+        },
+      }
+    }
+    return loadStoredAuth()
+  }, [initialDemoSession])
+
+  const tokenRef = useRef<string | null>(initialAuth?.token ?? null)
+  const [session, setSession] = useState<OperatorSession | null>(initialAuth?.session ?? null)
   const [spreadsheetId, setSpreadsheetId] = useState<string>(
     import.meta.env.VITE_SPREADSHEET_ID ?? '',
   )
@@ -81,15 +100,58 @@ export function AuthProvider({ children, initialDemoSession = false }: AuthProvi
     setPresets((prev) => ({ ...prev, ...partial }))
   }, [])
 
-  const signInDemo = useCallback((email = 'demo.operator@example.org') => {
-    tokenRef.current = 'demo-ephemeral-token'
+  const signOut = useCallback(() => {
+    const currentToken = tokenRef.current
+    tokenRef.current = null
+    setSession(null)
     setAuthError(null)
-    setSession({
+    clearStoredAuth()
+    if (currentToken && currentToken !== 'demo-ephemeral-token') {
+      window.google?.accounts?.oauth2?.revoke?.(currentToken)
+    }
+  }, [])
+
+  // Auto-logout when Google token expires
+  useEffect(() => {
+    if (session?.mode !== 'google' || !session.expiresAt) return
+    const timeLeft = Math.max(0, session.expiresAt - Date.now())
+    const timer = window.setTimeout(() => {
+      signOut()
+    }, timeLeft)
+    return () => {
+      window.clearTimeout(timer)
+    }
+  }, [session, signOut])
+
+  // Sync auth across multiple browser tabs
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === AUTH_STORAGE_KEY) {
+        if (!e.newValue) {
+          tokenRef.current = null
+          setSession(null)
+        } else {
+          const auth = loadStoredAuth()
+          tokenRef.current = auth?.token ?? null
+          setSession(auth?.session ?? null)
+        }
+      }
+    }
+    window.addEventListener('storage', handleStorageChange)
+    return () => window.removeEventListener('storage', handleStorageChange)
+  }, [])
+
+  const signInDemo = useCallback((email = 'demo.operator@example.org') => {
+    const demoSession: OperatorSession = {
       email: email.trim(),
       name: 'Оператор (Демо-режим)',
       mode: 'demo',
       expiresAt: null,
-    })
+    }
+    tokenRef.current = 'demo-ephemeral-token'
+    setAuthError(null)
+    setSession(demoSession)
+    saveStoredAuth('demo-ephemeral-token', demoSession)
   }, [])
 
   const signInWithGoogle = useCallback(async () => {
@@ -122,49 +184,43 @@ export function AuthProvider({ children, initialDemoSession = false }: AuthProvi
           tokenRef.current = response.access_token
           const expiresAt = Date.now() + (response.expires_in ?? 3599) * 1000
 
+          let newSession: OperatorSession
           try {
             const userInfoRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
               headers: { Authorization: `Bearer ${response.access_token}` },
             })
             if (userInfoRes.ok) {
               const profile = (await userInfoRes.json()) as { email?: string; name?: string }
-              setSession({
+              newSession = {
                 email: profile.email ?? 'operator@google.workspace',
                 name: profile.name ?? profile.email ?? 'Оператор Google',
                 mode: 'google',
                 expiresAt,
-              })
+              }
             } else {
-              setSession({
+              newSession = {
                 email: 'operator@google.workspace',
                 name: 'Оператор Google',
                 mode: 'google',
                 expiresAt,
-              })
+              }
             }
           } catch {
-            setSession({
+            newSession = {
               email: 'operator@google.workspace',
               name: 'Оператор Google',
               mode: 'google',
               expiresAt,
-            })
+            }
           }
+
+          setSession(newSession)
+          saveStoredAuth(response.access_token, newSession)
           resolve()
         },
       })
       client.requestAccessToken({ prompt: 'select_account' })
     })
-  }, [])
-
-  const signOut = useCallback(() => {
-    const currentToken = tokenRef.current
-    tokenRef.current = null
-    setSession(null)
-    setAuthError(null)
-    if (currentToken && currentToken !== 'demo-ephemeral-token') {
-      window.google?.accounts?.oauth2?.revoke?.(currentToken)
-    }
   }, [])
 
   const value = useMemo(
@@ -195,4 +251,3 @@ export function AuthProvider({ children, initialDemoSession = false }: AuthProvi
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
-
