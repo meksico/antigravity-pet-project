@@ -404,4 +404,105 @@ describe('Provisioning Accounting Workspace — Картки обліку ПЕО
     deleteSpy.mockRestore()
     fetchSpy.mockRestore()
   })
+
+  it('allows adding a new subdivision via "+ Додати нове" free form field and appends to _списки', async () => {
+    const user = userEvent.setup()
+    const appendSpy = vi
+      .spyOn(GoogleSheetsClient.prototype, 'appendDictionaryValue')
+      .mockResolvedValueOnce(undefined)
+    const createSpy = vi
+      .spyOn(GoogleSheetsClient.prototype, 'createLaptopRecord')
+      .mockImplementationOnce(async (draft) => ({
+        ...draft,
+        id: 106,
+        rowIndex: 7,
+        isCompleted: false,
+      }))
+    const fetchSpy = vi
+      .spyOn(GoogleSheetsClient.prototype, 'fetchWorkbookData')
+      .mockResolvedValue({
+        records: SYNTHETIC_LAPTOP_RECORDS,
+        dictionaries: DEFAULT_DICTIONARIES,
+        checklistSteps: DEFAULT_CHECKLIST_STEPS,
+      })
+
+    const mockAuthContext: AuthContextValue = {
+      session: {
+        email: 'operator@example.gov.ua',
+        name: 'Офіцер Безпеки',
+        mode: 'google',
+        expiresAt: Date.now() + 3600_000,
+      },
+      spreadsheetId: 'test-spreadsheet-123',
+      setSpreadsheetId: vi.fn(),
+      presets: {
+        militaryUnit: 'А0000',
+        infosecRank: 'майор',
+        infosecName: 'Петренко П.П.',
+        infosecPhone: '+380501112233',
+        defaultLocation: 'Київ',
+      },
+      updatePresets: vi.fn(),
+      getAccessToken: () => 'fake-token',
+      signInWithGoogle: vi.fn(),
+      signInDemo: vi.fn(),
+      signOut: vi.fn(),
+      authError: null,
+    }
+
+    render(
+      <AuthContext.Provider value={mockAuthContext}>
+        <ProvisioningWorkspace />
+      </AuthContext.Provider>,
+    )
+
+    // Open create modal
+    const createBtn = await screen.findByRole('button', { name: /Створити картку/i })
+    await user.click(createBtn)
+
+    const dialog = screen.getByRole('dialog', {
+      name: /Прийом нового лептопа|Створення нової картки/i,
+    })
+    expect(dialog).toBeInTheDocument()
+
+    // Select "+ Додати нове" in Підрозділ dropdown
+    const subdivisionSelect = within(dialog).getByLabelText(/Підрозділ/i)
+    await user.selectOptions(subdivisionSelect, '__NEW_SUBDIVISION__')
+
+    // It switches to free-form input
+    const customInput = within(dialog).getByPlaceholderText(/Введіть новий підрозділ/i)
+    expect(customInput).toBeInTheDocument()
+
+    // Test cancel button switches back
+    const cancelBtn = within(dialog).getByRole('button', {
+      name: /Повернутися до списку підрозділів/i,
+    })
+    await user.click(cancelBtn)
+    expect(within(dialog).getByLabelText(/Підрозділ/i).tagName).toBe('SELECT')
+
+    // Switch back to "+ Додати нове" and type a new subdivision
+    await user.selectOptions(within(dialog).getByLabelText(/Підрозділ/i), '__NEW_SUBDIVISION__')
+    const customInput2 = within(dialog).getByPlaceholderText(/Введіть новий підрозділ/i)
+    await user.type(customInput2, 'Рота РЕБ')
+
+    // Fill in required fields
+    await user.type(within(dialog).getByLabelText(/Інвентарний номер/i), '99')
+    await user.type(within(dialog).getByLabelText(/Імʼя ПЕОМ/i), 'DESKTOP-REB01')
+    await user.type(within(dialog).getByLabelText(/WiFi MAC/i), '00:11:22:33:44:55')
+    await user.type(within(dialog).getByLabelText(/ПІБ відповідального/i), 'Коваленко К.К.')
+    await user.selectOptions(within(dialog).getByLabelText(/Звання відповідального/i), 'Сержант')
+
+    // Submit modal
+    await user.click(within(dialog).getByRole('button', { name: /Створити та зберегти|Зберегти запис/i }))
+
+    // Expect appendDictionaryValue called for Column E with 'Рота РЕБ'
+    expect(appendSpy).toHaveBeenCalledWith('E', 'Рота РЕБ')
+
+    // Expect card created with subdivision 'Рота РЕБ'
+    expect(screen.getAllByText('DESKTOP-REB01').length).toBeGreaterThan(0)
+
+    appendSpy.mockRestore()
+    createSpy.mockRestore()
+    fetchSpy.mockRestore()
+  })
 })

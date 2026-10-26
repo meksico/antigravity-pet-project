@@ -7,7 +7,7 @@ import {
   type ReferenceDictionaries,
 } from '../../schemas/laptopRecordSchema'
 import { DEFAULT_CHECKLIST_STEPS, DEFAULT_DICTIONARIES } from '../../mocks/syntheticData'
-import { normalizeIntegerString } from '../converters/normalizers'
+import { normalizeIntegerString, sanitizeFormulaTrigger } from '../converters/normalizers'
 import { ClientRateLimiter, executeWithRetry } from './rateLimiter'
 import {
   buildBatchDisjointUpdatePayloads,
@@ -317,6 +317,56 @@ export class GoogleSheetsClient {
         // Non-blocking if F2 restore fails
       })
     }
+  }
+
+  /**
+   * Appends a new unique value to a column in '_списки' (e.g. Column E for 'Підрозділ').
+   */
+  public async appendDictionaryValue(
+    columnLetter: string,
+    value: string,
+    sheetName: string = '_списки',
+  ): Promise<void> {
+    const trimmed = value.trim()
+    if (!trimmed) {
+      return
+    }
+
+    const rangeParam = encodeURIComponent(`'${sheetName}'!${columnLetter}1:${columnLetter}100`)
+    const colData = await this.requestJson<{ values?: unknown[][] }>(
+      `/values/${rangeParam}?valueRenderOption=UNFORMATTED_VALUE`,
+    )
+    const rows = colData.values ?? []
+
+    // Check if already present (case-insensitive)
+    const exists = rows.slice(1).some((r) => {
+      const cellText = String(r?.[0] ?? '').trim()
+      return cellText.toLowerCase() === trimmed.toLowerCase()
+    })
+    if (exists) {
+      return
+    }
+
+    let lastPopulatedRow = 1
+    for (let i = 1; i < rows.length; i += 1) {
+      const cell = rows[i]?.[0]
+      if (cell !== undefined && cell !== null && String(cell).trim() !== '') {
+        lastPopulatedRow = i + 1
+      }
+    }
+
+    const nextRow = lastPopulatedRow + 1
+    const targetCellRange = `'${sheetName}'!${columnLetter}${nextRow}`
+    await this.requestJson(
+      `/values/${encodeURIComponent(targetCellRange)}?valueInputOption=USER_ENTERED`,
+      {
+        method: 'PUT',
+        body: JSON.stringify({
+          range: targetCellRange,
+          values: [[sanitizeFormulaTrigger(trimmed)]],
+        }),
+      },
+    )
   }
 }
 

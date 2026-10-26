@@ -296,6 +296,55 @@ describe('GoogleSheetsClient — REST API v4 Integration & Formula Safety (AC-00
     )
   })
 
+  it('appends a new dictionary value to the next empty row in _списки (Column E for Підрозділ)', async () => {
+    const calls: { url: string; method?: string; body?: unknown }[] = []
+    const mockFetch = vi.fn(async (url: string, init?: RequestInit) => {
+      calls.push({
+        url,
+        method: init?.method,
+        body: init?.body ? JSON.parse(init.body as string) : undefined,
+      })
+
+      if (decodeURIComponent(url).includes("'_списки'!E1:E100")) {
+        return new Response(
+          JSON.stringify({
+            values: [['Підрозділ'], ['САДн'], ['2МБ'], ['Штаб']],
+          }),
+          { status: 200 },
+        )
+      }
+
+      return new Response(JSON.stringify({ updatedCells: 1 }), { status: 200 })
+    })
+
+    const client = new GoogleSheetsClient({
+      spreadsheetId: 'test-sheet-id',
+      getAccessToken: () => 'test-access-token',
+      fetchImpl: mockFetch as unknown as typeof fetch,
+    })
+
+    // 1. Append new subdivision "Рота РЕБ"
+    await client.appendDictionaryValue('E', 'Рота РЕБ')
+
+    const putCall = calls.find((c) => c.method === 'PUT')
+    expect(putCall).toBeDefined()
+    expect(decodeURIComponent(putCall?.url ?? '')).toContain("'_списки'!E5")
+    expect(putCall?.body).toEqual({
+      range: "'_списки'!E5",
+      values: [['Рота РЕБ']],
+    })
+
+    // 2. If subdivision already exists, skips write
+    calls.length = 0
+    await client.appendDictionaryValue('E', 'САДн')
+    expect(calls.filter((c) => c.method === 'PUT')).toHaveLength(0)
+
+    // 3. If value is whitespace or empty, skips
+    calls.length = 0
+    await client.appendDictionaryValue('E', '   ')
+    expect(calls).toHaveLength(0)
+  })
+
   it('throws 401 when access token is missing or API returns error status', async () => {
     const unauthClient = new GoogleSheetsClient({
       spreadsheetId: 'test-sheet-id',

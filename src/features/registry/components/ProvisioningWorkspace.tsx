@@ -179,6 +179,34 @@ export function ProvisioningWorkspace() {
     setIsCardModalOpen(true)
   }
 
+  const handleAddNewSubdivision = async (newSubdivision: string) => {
+    const trimmed = newSubdivision.trim()
+    if (!trimmed) return
+
+    setDictionaries((prev) => {
+      if (prev.subdivisions.some((s) => s.toLowerCase() === trimmed.toLowerCase())) {
+        return prev
+      }
+      return {
+        ...prev,
+        subdivisions: [...prev.subdivisions, trimmed],
+      }
+    })
+
+    if (sheetsClient) {
+      try {
+        await sheetsClient.appendDictionaryValue('E', trimmed)
+        setSyncBanner(`Підрозділ «${trimmed}» успішно додано до довідника _списки`)
+      } catch (error) {
+        setSyncBanner(
+          error instanceof Error
+            ? error.message
+            : `Помилка додавання підрозділу «${trimmed}» до таблиці Google Sheets`,
+        )
+      }
+    }
+  }
+
   const handleCreateIntake = async (
     draft: Omit<LaptopRecord, 'rowIndex' | 'id' | 'isCompleted'>,
   ) => {
@@ -193,6 +221,10 @@ export function ProvisioningWorkspace() {
     }
 
     setRecords((prev) => [...prev, optimisticRecord])
+
+    if (draft.subdivision && !dictionaries.subdivisions.includes(draft.subdivision)) {
+      void handleAddNewSubdivision(draft.subdivision)
+    }
 
     if (sheetsClient) {
       try {
@@ -210,6 +242,13 @@ export function ProvisioningWorkspace() {
 
   const handleEditRecord = async (updatedRecord: LaptopRecord) => {
     setRecords((prev) => prev.map((r) => (r.id === updatedRecord.id ? updatedRecord : r)))
+
+    if (
+      updatedRecord.subdivision &&
+      !dictionaries.subdivisions.includes(updatedRecord.subdivision)
+    ) {
+      void handleAddNewSubdivision(updatedRecord.subdivision)
+    }
 
     if (sheetsClient) {
       try {
@@ -471,6 +510,7 @@ export function ProvisioningWorkspace() {
         }}
         onSubmitCreate={(draft) => void handleCreateIntake(draft)}
         onSubmitEdit={(updated) => void handleEditRecord(updated)}
+        onAddNewSubdivision={handleAddNewSubdivision}
       />
 
       <ChecklistDrawer

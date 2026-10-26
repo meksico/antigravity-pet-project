@@ -18,6 +18,7 @@ interface IntakeModalProps {
   onClose: () => void
   onSubmitCreate: (draft: Omit<LaptopRecord, 'rowIndex' | 'id' | 'isCompleted'>) => void
   onSubmitEdit: (updated: LaptopRecord) => void
+  onAddNewSubdivision?: (subdivision: string) => Promise<void> | void
 }
 
 interface CardModalFormState {
@@ -57,6 +58,7 @@ export function IntakeModal({
   onClose,
   onSubmitCreate,
   onSubmitEdit,
+  onAddNewSubdivision,
 }: IntakeModalProps) {
   const matchCanonicalRank = (rank: string) => {
     if (!rank) return ''
@@ -148,6 +150,19 @@ export function IntakeModal({
     return list
   }, [dictionaries.ranks, form.infosecRank])
 
+  const [isAddingNewSubdivision, setIsAddingNewSubdivision] = useState(false)
+
+  const subdivisionOptions = useMemo(() => {
+    const list = [...dictionaries.subdivisions]
+    if (
+      form.subdivision &&
+      !list.some((s) => s.toLowerCase() === form.subdivision.toLowerCase())
+    ) {
+      list.push(form.subdivision)
+    }
+    return list
+  }, [dictionaries.subdivisions, form.subdivision])
+
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [copiedFeedback, setCopiedFeedback] = useState(false)
 
@@ -219,6 +234,11 @@ export function IntakeModal({
     const normalizedIssuedPhone = form.issuedToPhone.trim()
       ? normalizePhone(form.issuedToPhone)
       : null
+
+    const trimmedSubdivision = form.subdivision.trim()
+    if (trimmedSubdivision && !dictionaries.subdivisions.includes(trimmedSubdivision)) {
+      void onAddNewSubdivision?.(trimmedSubdivision)
+    }
 
     if (editingRecord) {
       onSubmitEdit({
@@ -363,19 +383,59 @@ export function IntakeModal({
               </div>
               <div className="col-span-4 form-field-light">
                 <label htmlFor="intake-subdivision">Підрозділ</label>
-                <select
-                  id="intake-subdivision"
-                  name="subdivision"
-                  className="select-light"
-                  value={form.subdivision}
-                  onChange={handleFieldChange}
-                >
-                  {dictionaries.subdivisions.map((item) => (
-                    <option key={item} value={item}>
-                      {item}
-                    </option>
-                  ))}
-                </select>
+                {isAddingNewSubdivision ? (
+                  <div className="custom-input-wrap">
+                    <input
+                      id="intake-subdivision"
+                      name="subdivision"
+                      type="text"
+                      className="input-light custom-input-field"
+                      placeholder="Введіть новий підрозділ"
+                      value={form.subdivision}
+                      onChange={handleFieldChange}
+                      autoFocus
+                      required
+                    />
+                    <button
+                      type="button"
+                      className="btn-input-cancel"
+                      title="Повернутися до списку підрозділів"
+                      aria-label="Повернутися до списку підрозділів"
+                      onClick={() => {
+                        setIsAddingNewSubdivision(false)
+                        setForm((prev) => ({
+                          ...prev,
+                          subdivision: dictionaries.subdivisions[0] ?? '',
+                        }))
+                      }}
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+                ) : (
+                  <select
+                    id="intake-subdivision"
+                    name="subdivision"
+                    className="select-light"
+                    value={form.subdivision}
+                    onChange={(e) => {
+                      if (e.target.value === '__NEW_SUBDIVISION__') {
+                        setIsAddingNewSubdivision(true)
+                        setForm((prev) => ({ ...prev, subdivision: '' }))
+                      } else {
+                        handleFieldChange(e)
+                      }
+                    }}
+                    required
+                  >
+                    {subdivisionOptions.map((item) => (
+                      <option key={item} value={item}>
+                        {item}
+                      </option>
+                    ))}
+                    <option value="__NEW_SUBDIVISION__">+ Додати нове</option>
+                  </select>
+                )}
               </div>
             </div>
           </div>
