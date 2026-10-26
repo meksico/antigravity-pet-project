@@ -90,98 +90,41 @@ export function OperatorSessionBar({
           <h1 className="brand-block__title">Картки обліку ПЕОМ</h1>
         </div>
 
-        {/* Center Status Tabs (with testids for KPI verification) */}
-        <div className="segmented-group" role="group" aria-label="Фільтр за статусом">
-          <button
-            type="button"
-            className={`segmented-btn ${statusFilter === 'all' ? 'segmented-btn--active' : ''}`}
-            onClick={() => onSelectStatusFilter('all')}
-          >
-            <span>Всі (</span>
-            <span data-testid="kpi-total">{totalCount}</span>
-            <span>)</span>
-          </button>
-          <button
-            type="button"
-            className={`segmented-btn ${statusFilter === 'pending' ? 'segmented-btn--active' : ''}`}
-            onClick={() => onSelectStatusFilter('pending')}
-          >
-            <span className="dot dot--muted" aria-hidden="true" />
-            <span>Активні (</span>
-            <span data-testid="kpi-in-progress">{inProgressCount}</span>
-            <span>)</span>
-          </button>
-          <button
-            type="button"
-            className={`segmented-btn ${statusFilter === 'completed' ? 'segmented-btn--active' : ''}`}
-            onClick={() => onSelectStatusFilter('completed')}
-          >
-            <span className="dot dot--muted" aria-hidden="true" />
-            <span>Видано / Архів (</span>
-            <span data-testid="kpi-completed">{completedCount}</span>
-            <span>)</span>
-          </button>
-        </div>
-
-        {/* Right Controls: View Switcher + Sync + Create CTA + User Avatar */}
-        <div className="top-nav-header__actions">
-          <div className="segmented-group" role="group" aria-label="Режим відображення">
+        {/* Center-Right Group: Status Filter Tabs followed immediately by the User Avatar/Options */}
+        <div className="top-nav-header__center">
+          <div className="segmented-group" role="group" aria-label="Фільтр за статусом">
             <button
               type="button"
-              aria-label="Відобразити тільки картки"
-              title="Відобразити тільки картки"
-              className={`segmented-btn ${viewMode === 'cards' ? 'segmented-btn--active' : ''}`}
-              onClick={() => onSelectViewMode('cards')}
+              className={`segmented-btn ${statusFilter === 'all' ? 'segmented-btn--active' : ''}`}
+              onClick={() => onSelectStatusFilter('all')}
             >
-              <LayoutGrid size={14} />
-              <span>Картки</span>
+              <span>Всі (</span>
+              <span data-testid="kpi-total">{totalCount}</span>
+              <span>)</span>
             </button>
             <button
               type="button"
-              aria-label="Відобразити картки і таблицю"
-              title="Відобразити картки і таблицю"
-              className={`segmented-btn ${viewMode === 'split' ? 'segmented-btn--active' : ''}`}
-              onClick={() => onSelectViewMode('split')}
+              className={`segmented-btn ${statusFilter === 'pending' ? 'segmented-btn--active' : ''}`}
+              onClick={() => onSelectStatusFilter('pending')}
             >
-              <Columns2 size={14} />
-              <span>Картки + Таблиця</span>
+              <span className="dot dot--muted" aria-hidden="true" />
+              <span>Активні (</span>
+              <span data-testid="kpi-in-progress">{inProgressCount}</span>
+              <span>)</span>
             </button>
             <button
               type="button"
-              aria-label="Відобразити лише таблицю"
-              title="Відобразити лише таблицю"
-              className={`segmented-btn ${viewMode === 'table' ? 'segmented-btn--active' : ''}`}
-              onClick={() => onSelectViewMode('table')}
+              className={`segmented-btn ${statusFilter === 'completed' ? 'segmented-btn--active' : ''}`}
+              onClick={() => onSelectStatusFilter('completed')}
             >
-              <Table2 size={14} />
-              <span>Таблиця</span>
+              <span className="dot dot--muted" aria-hidden="true" />
+              <span>Видано / Архів (</span>
+              <span data-testid="kpi-completed">{completedCount}</span>
+              <span>)</span>
             </button>
           </div>
 
-          {session?.mode === 'google' && onSyncWithGoogleSheets && (
-            <button
-              type="button"
-              className="btn-header-ghost"
-              onClick={onSyncWithGoogleSheets}
-              disabled={isSyncing}
-              title="Синхронізувати з Google Sheets"
-              aria-label="Оновити дані з Google Sheets"
-            >
-              <RefreshCw size={14} className={isSyncing ? 'spin' : ''} />
-              <span>{isSyncing ? 'Синхронізація...' : 'Синхронізувати'}</span>
-            </button>
-          )}
-
-          <button
-            type="button"
-            className="btn-orange-cta"
-            onClick={onOpenCreateCard}
-          >
-            <Plus size={16} />
-            <span>Створити картку</span>
-          </button>
-
-          {/* User Avatar with Profile Popup */}
+          {/* User Avatar & Profile Popup right after Status Filter Tabs */}
           {session && (
             <div className="user-profile-menu" ref={profileRef}>
               <button
@@ -250,6 +193,65 @@ export function OperatorSessionBar({
               )}
             </div>
           )}
+        </div>
+
+        {/* Right Controls: View Switcher + Sync + Create CTA */}
+        <div className="top-nav-header__actions">
+          <div className="segmented-group" role="group" aria-label="Режим відображення">
+            <button
+              type="button"
+              aria-label="Відобразити тільки картки"
+              title="Відобразити тільки картки"
+              className={`segmented-btn ${viewMode === 'cards' ? 'segmented-btn--active' : ''}`}
+              onClick={() => onSelectViewMode('cards')}
+            >
+              <LayoutGrid size={14} />
+              <span>Картки</span>
+            </button>
+            <button
+              type="button"
+              aria-label="Відобразити картки і таблицю"
+              title="Відобразити картки і таблицю"
+              className={`segmented-btn ${viewMode === 'split' ? 'segmented-btn--active' : ''}`}
+              onClick={() => onSelectViewMode('split')}
+            >
+              <Columns2 size={14} />
+              <span>Картки + Таблиця</span>
+            </button>
+            <button
+              type="button"
+              aria-label="Відобразити лише таблицю"
+              title="Відобразити лише таблицю"
+              className={`segmented-btn ${viewMode === 'table' ? 'segmented-btn--active' : ''}`}
+              onClick={() => onSelectViewMode('table')}
+            >
+              <Table2 size={14} />
+              <span>Таблиця</span>
+            </button>
+          </div>
+
+          {session?.mode === 'google' && onSyncWithGoogleSheets && (
+            <button
+              type="button"
+              className="btn-header-ghost"
+              onClick={onSyncWithGoogleSheets}
+              disabled={isSyncing}
+              title="Синхронізувати з Google Sheets"
+              aria-label="Оновити дані з Google Sheets"
+            >
+              <RefreshCw size={14} className={isSyncing ? 'spin' : ''} />
+              <span>{isSyncing ? 'Синхронізація...' : 'Синхронізувати'}</span>
+            </button>
+          )}
+
+          <button
+            type="button"
+            className="btn-orange-cta"
+            onClick={onOpenCreateCard}
+          >
+            <Plus size={16} />
+            <span>Створити картку</span>
+          </button>
         </div>
       </div>
 
