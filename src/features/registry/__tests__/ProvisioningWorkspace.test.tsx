@@ -97,7 +97,9 @@ describe('Provisioning Accounting Workspace — Картки обліку ПЕО
 
     // Clear search via clear button and filter by status "Активні" (pending)
     await user.click(screen.getByRole('button', { name: 'Очистити пошук' }))
-    await user.click(screen.getByRole('button', { name: /Активні/i }))
+    const activeFilterBtn = screen.getByRole('button', { name: /Активні/i })
+    expect(activeFilterBtn.querySelector('.dot')).toHaveClass('dot--green')
+    await user.click(activeFilterBtn)
     expect(screen.queryByText('DESKTOP-DEMO101')).not.toBeInTheDocument()
     expect(screen.getAllByText('DESKTOP-DEMO103').length).toBeGreaterThan(0)
 

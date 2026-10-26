@@ -116,6 +116,15 @@
   background: #6b7280;
 }
 
+.dot--muted {
+  background: #6b7280;
+}
+
+.dot--green {
+  background: #10b981;
+  box-shadow: 0 0 5px rgba(16, 185, 129, 0.45);
+}
+
 .top-nav-header__actions {
   display: flex;
   flex-wrap: wrap;

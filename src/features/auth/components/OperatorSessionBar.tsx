@@ -204,7 +204,7 @@ export function OperatorSessionBar({
               className={`segmented-btn ${statusFilter === 'pending' ? 'segmented-btn--active' : ''}`}
               onClick={() => onSelectStatusFilter('pending')}
             >
-              <span className="dot dot--muted" aria-hidden="true" />
+              <span className="dot dot--green" aria-hidden="true" />
               <span>Активні (</span>
               <span data-testid="kpi-in-progress">{inProgressCount}</span>
               <span>)</span>
