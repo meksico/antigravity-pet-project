@@ -20,6 +20,7 @@ interface IntakeModalProps {
   onSubmitCreate: (draft: Omit<LaptopRecord, 'rowIndex' | 'id' | 'isCompleted'>) => void
   onSubmitEdit: (updated: LaptopRecord) => void
   onAddNewSubdivision?: (subdivision: string) => Promise<void> | void
+  onAddNewMilitaryUnit?: (militaryUnit: string) => Promise<void> | void
 }
 
 interface CardModalFormState {
@@ -60,6 +61,7 @@ export function IntakeModal({
   onSubmitCreate,
   onSubmitEdit,
   onAddNewSubdivision,
+  onAddNewMilitaryUnit,
 }: IntakeModalProps) {
   const matchCanonicalRank = (rank: string) => {
     if (!rank) return ''
@@ -152,6 +154,7 @@ export function IntakeModal({
   }, [dictionaries.ranks, form.infosecRank])
 
   const [isAddingNewSubdivision, setIsAddingNewSubdivision] = useState(false)
+  const [isAddingNewMilitaryUnit, setIsAddingNewMilitaryUnit] = useState(false)
 
   const subdivisionOptions = useMemo(() => {
     const list = [...dictionaries.subdivisions]
@@ -163,6 +166,17 @@ export function IntakeModal({
     }
     return list
   }, [dictionaries.subdivisions, form.subdivision])
+
+  const militaryUnitOptions = useMemo(() => {
+    const list = [...dictionaries.militaryUnits]
+    if (
+      form.militaryUnit &&
+      !list.some((u) => u.toLowerCase() === form.militaryUnit.toLowerCase())
+    ) {
+      list.push(form.militaryUnit)
+    }
+    return list
+  }, [dictionaries.militaryUnits, form.militaryUnit])
 
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [copiedFeedback, setCopiedFeedback] = useState(false)
@@ -232,6 +246,11 @@ export function IntakeModal({
     const trimmedSubdivision = form.subdivision.trim()
     if (trimmedSubdivision && !dictionaries.subdivisions.includes(trimmedSubdivision)) {
       void onAddNewSubdivision?.(trimmedSubdivision)
+    }
+
+    const trimmedMilitaryUnit = form.militaryUnit.trim()
+    if (trimmedMilitaryUnit && !dictionaries.militaryUnits.includes(trimmedMilitaryUnit)) {
+      void onAddNewMilitaryUnit?.(trimmedMilitaryUnit)
     }
 
     if (editingRecord) {
@@ -562,14 +581,63 @@ export function IntakeModal({
               </div>
               <div className="col-span-4 form-field-light">
                 <label htmlFor="intake-unit">Військова частина</label>
-                <input
-                  id="intake-unit"
-                  name="militaryUnit"
-                  type="text"
-                  className="input-light"
-                  value={form.militaryUnit}
-                  onChange={handleFieldChange}
-                />
+                {isAddingNewMilitaryUnit ? (
+                  <div className="custom-input-wrap">
+                    <input
+                      id="intake-unit"
+                      name="militaryUnit"
+                      type="text"
+                      className="input-light custom-input-field"
+                      placeholder="Введіть нову військову частину"
+                      value={form.militaryUnit}
+                      onChange={handleFieldChange}
+                      autoFocus
+                      required
+                    />
+                    <button
+                      type="button"
+                      className="btn-input-cancel"
+                      title="Повернутися до списку військових частин"
+                      aria-label="Повернутися до списку військових частин"
+                      onClick={() => {
+                        setIsAddingNewMilitaryUnit(false)
+                        setForm((prev) => ({
+                          ...prev,
+                          militaryUnit:
+                            editingRecord?.militaryUnit ||
+                            dictionaries.militaryUnits[0] ||
+                            presets.militaryUnit ||
+                            '',
+                        }))
+                      }}
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+                ) : (
+                  <select
+                    id="intake-unit"
+                    name="militaryUnit"
+                    className="select-light"
+                    value={form.militaryUnit}
+                    onChange={(e) => {
+                      if (e.target.value === '__NEW_MILITARY_UNIT__') {
+                        setIsAddingNewMilitaryUnit(true)
+                        setForm((prev) => ({ ...prev, militaryUnit: '' }))
+                      } else {
+                        handleFieldChange(e)
+                      }
+                    }}
+                    required
+                  >
+                    {militaryUnitOptions.map((item) => (
+                      <option key={item} value={item}>
+                        {item}
+                      </option>
+                    ))}
+                    <option value="__NEW_MILITARY_UNIT__">+ Додати нове</option>
+                  </select>
+                )}
               </div>
 
               <div className="col-span-4 form-field-light">

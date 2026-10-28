@@ -208,6 +208,34 @@ export function ProvisioningWorkspace() {
     }
   }
 
+  const handleAddNewMilitaryUnit = async (newUnit: string) => {
+    const trimmed = newUnit.trim()
+    if (!trimmed) return
+
+    setDictionaries((prev) => {
+      if (prev.militaryUnits.some((u) => u.toLowerCase() === trimmed.toLowerCase())) {
+        return prev
+      }
+      return {
+        ...prev,
+        militaryUnits: [...prev.militaryUnits, trimmed],
+      }
+    })
+
+    if (sheetsClient) {
+      try {
+        await sheetsClient.appendDictionaryValue('H', trimmed)
+        setSyncBanner(`Військову частину «${trimmed}» успішно додано до довідника _списки`)
+      } catch (error) {
+        setSyncBanner(
+          error instanceof Error
+            ? error.message
+            : `Помилка додавання військової частини «${trimmed}» до таблиці Google Sheets`,
+        )
+      }
+    }
+  }
+
   const handleCreateIntake = async (
     draft: Omit<LaptopRecord, 'rowIndex' | 'id' | 'isCompleted'>,
   ) => {
@@ -225,6 +253,9 @@ export function ProvisioningWorkspace() {
 
     if (draft.subdivision && !dictionaries.subdivisions.includes(draft.subdivision)) {
       void handleAddNewSubdivision(draft.subdivision)
+    }
+    if (draft.militaryUnit && !dictionaries.militaryUnits.includes(draft.militaryUnit)) {
+      void handleAddNewMilitaryUnit(draft.militaryUnit)
     }
 
     if (sheetsClient) {
@@ -249,6 +280,12 @@ export function ProvisioningWorkspace() {
       !dictionaries.subdivisions.includes(updatedRecord.subdivision)
     ) {
       void handleAddNewSubdivision(updatedRecord.subdivision)
+    }
+    if (
+      updatedRecord.militaryUnit &&
+      !dictionaries.militaryUnits.includes(updatedRecord.militaryUnit)
+    ) {
+      void handleAddNewMilitaryUnit(updatedRecord.militaryUnit)
     }
 
     if (sheetsClient) {
@@ -505,6 +542,7 @@ export function ProvisioningWorkspace() {
         onSubmitCreate={(draft) => void handleCreateIntake(draft)}
         onSubmitEdit={(updated) => void handleEditRecord(updated)}
         onAddNewSubdivision={handleAddNewSubdivision}
+        onAddNewMilitaryUnit={handleAddNewMilitaryUnit}
       />
 
       <ChecklistDrawer

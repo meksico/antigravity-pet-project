@@ -542,4 +542,90 @@ describe('Provisioning Accounting Workspace — Картки обліку ПЕО
     createSpy.mockRestore()
     fetchSpy.mockRestore()
   })
+
+  it('allows adding a new military unit via "+ Додати нове" free form field and appends to _списки Column H', async () => {
+    const user = userEvent.setup({ delay: null })
+    const appendSpy = vi
+      .spyOn(GoogleSheetsClient.prototype, 'appendDictionaryValue')
+      .mockResolvedValueOnce(undefined)
+    const updateSpy = vi
+      .spyOn(GoogleSheetsClient.prototype, 'updateLaptopRecord')
+      .mockResolvedValueOnce(undefined)
+    const fetchSpy = vi
+      .spyOn(GoogleSheetsClient.prototype, 'fetchWorkbookData')
+      .mockResolvedValue({
+        records: SYNTHETIC_LAPTOP_RECORDS,
+        dictionaries: DEFAULT_DICTIONARIES,
+        checklistSteps: DEFAULT_CHECKLIST_STEPS,
+      })
+
+    const mockAuthContext: AuthContextValue = {
+      session: {
+        email: 'operator@example.gov.ua',
+        name: 'Офіцер Безпеки',
+        mode: 'google',
+        expiresAt: Date.now() + 3600_000,
+      },
+      spreadsheetId: 'test-spreadsheet-123',
+      setSpreadsheetId: vi.fn(),
+      presets: {
+        militaryUnit: 'A0000',
+        infosecRank: 'майор',
+        infosecName: 'Петренко П.П.',
+        infosecPhone: '+380501112233',
+        defaultLocation: 'Київ',
+      },
+      updatePresets: vi.fn(),
+      getAccessToken: () => 'fake-token',
+      signInWithGoogle: vi.fn(),
+      signInDemo: vi.fn(),
+      signOut: vi.fn(),
+      authError: null,
+    }
+
+    render(
+      <AuthContext.Provider value={mockAuthContext}>
+        <ProvisioningWorkspace />
+      </AuthContext.Provider>,
+    )
+
+    // Find card and click edit button
+    const editBtns = await screen.findAllByRole('button', { name: /Редагувати картку/i })
+    await user.click(editBtns[0]!)
+
+    const dialog = screen.getByRole('dialog', {
+      name: /Редагування картки ID/i,
+    })
+    expect(dialog).toBeInTheDocument()
+
+    // Select "+ Додати нове" in Військова частина dropdown
+    const unitSelect = within(dialog).getByLabelText(/Військова частина/i)
+    await user.selectOptions(unitSelect, '__NEW_MILITARY_UNIT__')
+
+    // It switches to free-form input
+    const customInput = within(dialog).getByPlaceholderText(/Введіть нову військову частину/i)
+    expect(customInput).toBeInTheDocument()
+
+    // Test cancel button switches back
+    const cancelBtn = within(dialog).getByRole('button', {
+      name: /Повернутися до списку військових частин/i,
+    })
+    await user.click(cancelBtn)
+    expect(within(dialog).getByLabelText(/Військова частина/i).tagName).toBe('SELECT')
+
+    // Switch back to "+ Додати нове" and type a new military unit
+    await user.selectOptions(within(dialog).getByLabelText(/Військова частина/i), '__NEW_MILITARY_UNIT__')
+    const customInput2 = within(dialog).getByPlaceholderText(/Введіть нову військову частину/i)
+    await user.type(customInput2, 'A7788')
+
+    // Submit edit
+    await user.click(within(dialog).getByRole('button', { name: /Зберегти зміни/i }))
+
+    // Expect appendDictionaryValue called for Column H with 'A7788'
+    expect(appendSpy).toHaveBeenCalledWith('H', 'A7788')
+
+    appendSpy.mockRestore()
+    updateSpy.mockRestore()
+    fetchSpy.mockRestore()
+  })
 })

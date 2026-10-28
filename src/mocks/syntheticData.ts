@@ -21,7 +21,7 @@ export const DEFAULT_DICTIONARIES: ReferenceDictionaries = {
   ],
   locations: ['ППД', 'КП', 'Резерв'],
   peomDescriptions: ['Робочий', 'Резервний', 'На обслуговуванні'],
-  militaryUnits: ['A0000', 'A1111'],
+  militaryUnits: ['A0000', 'A0932', 'A1111'],
   policies: [
     'АС-1',
     'АС-2, 3',
