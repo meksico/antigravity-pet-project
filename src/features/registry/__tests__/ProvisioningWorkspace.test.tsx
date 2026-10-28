@@ -13,7 +13,7 @@ import {
 
 describe('Provisioning Accounting Workspace — Картки обліку ПЕОМ + Таблиця (AC-001, AC-004..AC-009)', () => {
   it('blocks workspace behind minimal AuthSplashScreen when unauthenticated and unlocks after Google authorization (AC-001)', async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
     render(<App />)
 
     // Unauthenticated users ONLY see the minimal splash screen; workspace is not rendered
@@ -31,7 +31,7 @@ describe('Provisioning Accounting Workspace — Картки обліку ПЕО
   })
 
   it('returns to AuthSplashScreen when signing out from avatar popup (AC-001)', async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
     render(<App initialDemoSession={true} />)
 
     expect(screen.getByTestId('kpi-total')).toHaveTextContent('5')
@@ -51,7 +51,7 @@ describe('Provisioning Accounting Workspace — Картки обліку ПЕО
   })
 
   it('renders Split View (Картки + Таблиця), status counters, ID sorting, and filters by Відповідальний and MAC (AC-005)', async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
     render(<App initialDemoSession={true} />)
 
     // Verify header title and status counters
@@ -109,7 +109,7 @@ describe('Provisioning Accounting Workspace — Картки обліку ПЕО
   })
 
   it('creates a new laptop card via Створення нової картки modal with 4 sections, auto-ID, and normalized MAC (AC-006)', async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
     render(<App initialDemoSession={true} />)
 
     await user.click(screen.getByRole('button', { name: /Створити картку/i }))
@@ -143,7 +143,7 @@ describe('Provisioning Accounting Workspace — Картки обліку ПЕО
   })
 
   it('expands full card details, duplicates a card with next ID, edits an existing card, and deletes a card', async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
     render(<App initialDemoSession={true} />)
 
     // Expand full card details on the first card and collapse it back
@@ -194,7 +194,7 @@ describe('Provisioning Accounting Workspace — Картки обліку ПЕО
   })
 
   it('opens the 27-step Перевірка інсталяції modal from a card or table, toggles steps, and updates Column AA (AC-007)', async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
     render(<App initialDemoSession={true} />)
 
     const checklistBtns = screen.getAllByRole('button', {
@@ -232,7 +232,7 @@ describe('Provisioning Accounting Workspace — Картки обліку ПЕО
   })
 
   it('executes laptop handover via HandoverModal and supports bulk actions (AC-008, AC-009)', async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
 
     render(<App initialDemoSession={true} />)
 
@@ -291,7 +291,7 @@ describe('Provisioning Accounting Workspace — Картки обліку ПЕО
   })
 
   it('copies card details to clipboard using the standardized 7-line template', async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
     const writeTextMock = vi.fn().mockResolvedValue(undefined)
     Object.defineProperty(navigator, 'clipboard', {
       value: {
@@ -322,7 +322,7 @@ describe('Provisioning Accounting Workspace — Картки обліку ПЕО
   })
 
   it('calls sheetsClient.deleteLaptopRecord and shows banner when deleting a card in Google mode', async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
     const fetchSpy = vi
       .spyOn(GoogleSheetsClient.prototype, 'fetchWorkbookData')
       .mockResolvedValue({
@@ -385,7 +385,7 @@ describe('Provisioning Accounting Workspace — Картки обліку ПЕО
   })
 
   it('displays error banner if deleting a card in Google Sheets fails', async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
     const fetchSpy = vi
       .spyOn(GoogleSheetsClient.prototype, 'fetchWorkbookData')
       .mockResolvedValue({
@@ -443,7 +443,7 @@ describe('Provisioning Accounting Workspace — Картки обліку ПЕО
   })
 
   it('allows adding a new subdivision via "+ Додати нове" free form field and appends to _списки', async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
     const appendSpy = vi
       .spyOn(GoogleSheetsClient.prototype, 'appendDictionaryValue')
       .mockResolvedValueOnce(undefined)
