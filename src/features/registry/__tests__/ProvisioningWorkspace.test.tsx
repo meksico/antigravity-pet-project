@@ -88,10 +88,16 @@ describe('Provisioning Accounting Workspace — Картки обліку ПЕО
     await user.click(screen.getByRole('button', { name: 'Очистити фільтр відповідального' }))
     expect(screen.getAllByText('DESKTOP-DEMO101').length).toBeGreaterThan(0)
 
-    // Search by hyphen-formatted MAC even though record is stored with colons
-    const searchInput = screen.getByPlaceholderText(/Пошук за Імʼя ПЕОМ, Інв\.н\., Підрозділ/i)
-    await user.type(searchInput, '00-1a-2b-3c-4d-04')
+    // Search by hyphen-formatted MAC fragment even though record is stored with colons
+    const searchInput = screen.getByPlaceholderText(/Пошук за Ім['ʼ]я ПЕОМ, Інв\.н\., Підрозділ, MAC/i)
+    await user.type(searchInput, '3c-4d-04')
 
+    expect(screen.getAllByText('DESKTOP-DEMO104').length).toBeGreaterThan(0)
+    expect(screen.queryByText('DESKTOP-DEMO101')).not.toBeInTheDocument()
+
+    // Test pure hex fragment search (e.g. 3c4d04)
+    await user.clear(searchInput)
+    await user.type(searchInput, '3c4d04')
     expect(screen.getAllByText('DESKTOP-DEMO104').length).toBeGreaterThan(0)
     expect(screen.queryByText('DESKTOP-DEMO101')).not.toBeInTheDocument()
 

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  matchesMacSearch,
   normalizeBooleanCell,
   normalizeEsetUuid,
   normalizeIntegerString,
@@ -47,6 +48,65 @@ describe('Data Hygiene Normalizers (AC-002)', () => {
       expect(normalizeMacAddress('')).toBe('')
       expect(normalizeMacAddress('   ')).toBe('')
       expect(normalizeMacAddress('INVALID-MAC')).toBe('INVALID-MAC')
+    })
+  })
+
+  describe('matchesMacSearch', () => {
+    const targetMac = '04:F0:EE:D5:B8:FD'
+
+    it('matches exact full MAC address regardless of separators and casing', () => {
+      expect(matchesMacSearch(targetMac, '04:f0:ee:d5:b8:fd')).toBe(true)
+      expect(matchesMacSearch(targetMac, '04-F0-EE-D5-B8-FD')).toBe(true)
+      expect(matchesMacSearch(targetMac, '04f0.eed5.b8fd')).toBe(true)
+      expect(matchesMacSearch(targetMac, '04 f0 ee d5 b8 fd')).toBe(true)
+      expect(matchesMacSearch(targetMac, '04f0eed5b8fd')).toBe(true)
+      expect(matchesMacSearch(targetMac, '04_F0_EE_D5_B8_FD')).toBe(true)
+    })
+
+    it('matches prefixes with various separators or pure hex', () => {
+      expect(matchesMacSearch(targetMac, '04:f0:ee')).toBe(true)
+      expect(matchesMacSearch(targetMac, '04-f0-ee')).toBe(true)
+      expect(matchesMacSearch(targetMac, '04f0ee')).toBe(true)
+      expect(matchesMacSearch(targetMac, '04-f0')).toBe(true)
+      expect(matchesMacSearch(targetMac, '04:f0')).toBe(true)
+    })
+
+    it('matches suffixes with various separators or pure hex', () => {
+      expect(matchesMacSearch(targetMac, 'd5:b8:fd')).toBe(true)
+      expect(matchesMacSearch(targetMac, 'd5-b8-fd')).toBe(true)
+      expect(matchesMacSearch(targetMac, 'd5b8fd')).toBe(true)
+      expect(matchesMacSearch(targetMac, 'b8:fd')).toBe(true)
+    })
+
+    it('matches internal fragments with or without separators', () => {
+      expect(matchesMacSearch(targetMac, 'ee:d5:b8')).toBe(true)
+      expect(matchesMacSearch(targetMac, 'eed5b8')).toBe(true)
+    })
+
+    it('does not false-positive match short numbers or words when not present in MAC', () => {
+      // 101 is pure hex (< 4 chars) and targetMac hex '04f0eed5b8fd' does not contain '101'
+      expect(matchesMacSearch(targetMac, '101')).toBe(false)
+      expect(matchesMacSearch(targetMac, 'DESKTOP')).toBe(false)
+      expect(matchesMacSearch(targetMac, 'Солдат')).toBe(false)
+      expect(matchesMacSearch(targetMac, '12:34:56')).toBe(false)
+    })
+
+    it('does not false-positive match non-MAC queries containing separators and incidental hex chars', () => {
+      expect(matchesMacSearch(targetMac, 'INV-04')).toBe(false)
+      expect(matchesMacSearch(targetMac, 'ID-04')).toBe(false)
+      expect(matchesMacSearch(targetMac, 'Windows 11')).toBe(false)
+      expect(matchesMacSearch(targetMac, 'AS-1')).toBe(false)
+      expect(matchesMacSearch(targetMac, '1.0')).toBe(false)
+      expect(matchesMacSearch(targetMac, '1-2')).toBe(false)
+      expect(matchesMacSearch(targetMac, 'Office 04')).toBe(false)
+    })
+
+    it('handles empty or null/undefined inputs gracefully', () => {
+      expect(matchesMacSearch(null, '04:f0')).toBe(false)
+      expect(matchesMacSearch(undefined, '04:f0')).toBe(false)
+      expect(matchesMacSearch('', '04:f0')).toBe(false)
+      expect(matchesMacSearch(targetMac, '')).toBe(false)
+      expect(matchesMacSearch(targetMac, '   ')).toBe(false)
     })
   })
 

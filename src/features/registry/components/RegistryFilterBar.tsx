@@ -80,9 +80,9 @@ export function RegistryFilterBar({
           <Search size={15} className="text-orange" aria-hidden="true" />
           <input
             type="search"
-            aria-label="Пошук за Імʼя ПЕОМ, Інв.н., Підрозділ"
+            aria-label="Пошук за Імʼя ПЕОМ, Інв.н., Підрозділ, MAC"
             className="dark-search-box__input"
-            placeholder="Пошук за Імʼя ПЕОМ, Інв.н., Підрозділ..."
+            placeholder="Пошук за Імʼя ПЕОМ, Інв.н., Підрозділ, MAC..."
             value={filters.searchQuery}
             onChange={(e) => onUpdateFilters({ searchQuery: e.target.value })}
           />

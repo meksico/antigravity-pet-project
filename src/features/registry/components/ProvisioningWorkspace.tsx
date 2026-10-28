@@ -10,7 +10,7 @@ import type {
   ReferenceDictionaries,
 } from '../../../schemas/laptopRecordSchema'
 import {
-  normalizeMacAddress,
+  matchesMacSearch,
 } from '../../../services/converters/normalizers'
 import { formatCardClipboardText } from '../../../services/converters/cardClipboardFormatter'
 import { GoogleSheetsClient } from '../../../services/sheets/sheetsClient'
@@ -117,7 +117,6 @@ export function ProvisioningWorkspace() {
 
   const filteredRecords = useMemo(() => {
     const rawQuery = filters.searchQuery.trim().toLowerCase()
-    const normalizedMacQuery = normalizeMacAddress(filters.searchQuery).toLowerCase()
 
     const matching = records.filter((record) => {
       if (filters.status === 'completed' && !record.isCompleted) return false
@@ -154,11 +153,7 @@ export function ProvisioningWorkspace() {
         .toLowerCase()
 
       const matchesText = searchableFields.includes(rawQuery)
-      const matchesMac =
-        normalizedMacQuery.length >= 4 &&
-        record.wifiMac.toLowerCase().includes(normalizedMacQuery)
-
-      return matchesText || matchesMac
+      return matchesText || matchesMacSearch(record.wifiMac, filters.searchQuery)
     })
 
     return [...matching].sort((a, b) =>
