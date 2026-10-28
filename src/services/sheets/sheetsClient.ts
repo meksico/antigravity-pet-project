@@ -206,10 +206,58 @@ export class GoogleSheetsClient {
   }
 
   /**
-   * Reads Column A to determine the next available row and MAX(ID) + 1, then writes disjoint ranges A..E and G..AB.
+   * Ensures the registry sheet has enough rows to accommodate targetRow.
+   * If targetRow exceeds grid limits, automatically appends rows.
+   */
+  public async ensureGridCapacity(targetRow: number): Promise<void> {
+    const sheetId = await this.getRegistrySheetId()
+    if (!sheetId && sheetId !== 0) return
+
+    try {
+      const metadata = await this.requestJson<{
+        sheets?: Array<{
+          properties?: {
+            sheetId?: number
+            title?: string
+            gridProperties?: { rowCount?: number; columnCount?: number }
+          }
+        }>
+      }>('?fields=sheets.properties(sheetId,title,gridProperties)')
+
+      const target = metadata.sheets?.find(
+        (s) => s.properties?.title === REGISTRY_SHEET_NAME,
+      )
+      const currentRowCount = target?.properties?.gridProperties?.rowCount ?? 1000
+
+      if (targetRow > currentRowCount) {
+        const rowsToAdd = Math.max(100, targetRow - currentRowCount + 50)
+        await this.requestJson(':batchUpdate', {
+          method: 'POST',
+          body: JSON.stringify({
+            requests: [
+              {
+                appendDimension: {
+                  sheetId,
+                  dimension: 'ROWS',
+                  length: rowsToAdd,
+                },
+              },
+            ],
+          }),
+        })
+      }
+    } catch {
+      // Non-fatal if gridProperties inspection is unavailable
+    }
+  }
+
+  /**
+   * Reads Column A to determine the next available contiguous row and MAX(ID) + 1,
+   * ignoring any stray footer rows / formulas after blank gaps, and writes disjoint ranges A..E and G..AB.
    */
   public async createLaptopRecord(
     draft: Omit<LaptopRecord, 'rowIndex' | 'id' | 'isCompleted'>,
+    preferredNextRow?: number,
   ): Promise<LaptopRecord> {
     const colARange = encodeURIComponent(`'${REGISTRY_SHEET_NAME}'!A1:A2000`)
     const colAData = await this.requestJson<{ values?: unknown[][] }>(
@@ -218,16 +266,42 @@ export class GoogleSheetsClient {
     const rows = colAData.values ?? [['ID']]
     let maxId = 0
     let lastPopulatedRowIndex = 1 // 1-based header row
+    let consecutiveEmptyRows = 0
+
     for (let i = 1; i < rows.length; i += 1) {
-      const idStr = normalizeIntegerString(rows[i]?.[0])
-      const num = Number.parseInt(idStr, 10)
+      const cellVal = rows[i]?.[0]
+      const idStr = normalizeIntegerString(cellVal)
+      const isInteger = /^\d+$/.test(idStr)
+      const num = isInteger ? Number.parseInt(idStr, 10) : NaN
+
       if (!Number.isNaN(num) && num > 0) {
+        // If we hit a large gap (>= 3 empty rows) and then see a number,
+        // it is an isolated summary / formula cell at the bottom of the sheet.
+        if (consecutiveEmptyRows >= 3) {
+          break
+        }
         if (num > maxId) maxId = num
         lastPopulatedRowIndex = i + 1
+        consecutiveEmptyRows = 0
+      } else {
+        consecutiveEmptyRows += 1
+        // After encountering 3 empty rows after populated records, stop scanning
+        if (consecutiveEmptyRows >= 3 && lastPopulatedRowIndex > 1) {
+          break
+        }
       }
     }
 
-    const nextRowIndex = lastPopulatedRowIndex + 1
+    let nextRowIndex = lastPopulatedRowIndex + 1
+    // If a valid preferredNextRow is provided and is contiguous with records, use it
+    if (
+      preferredNextRow &&
+      preferredNextRow > 1 &&
+      (preferredNextRow === nextRowIndex || preferredNextRow <= lastPopulatedRowIndex + 1)
+    ) {
+      nextRowIndex = preferredNextRow
+    }
+
     const nextId = maxId + 1
     const newRecord: LaptopRecord = {
       ...draft,
@@ -235,6 +309,8 @@ export class GoogleSheetsClient {
       id: nextId,
       isCompleted: Boolean(draft.issuedAt),
     }
+
+    await this.ensureGridCapacity(nextRowIndex)
 
     const disjointRanges = buildDisjointRowUpdatePayloads(newRecord)
     await this.requestJson('/values:batchUpdate', {

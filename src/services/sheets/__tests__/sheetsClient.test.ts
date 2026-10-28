@@ -203,6 +203,116 @@ describe('GoogleSheetsClient — REST API v4 Integration & Formula Safety (AC-00
     expect(created.isCompleted).toBe(false)
   })
 
+  it('ignores stray summary rows or formulas after a gap of empty rows when creating a record', async () => {
+    const mockFetch = vi.fn(async (url: string) => {
+      if (url.includes('values:batchUpdate')) {
+        return new Response(JSON.stringify({ totalUpdatedCells: 27 }), { status: 200 })
+      }
+      return new Response(
+        JSON.stringify({
+          values: [
+            ['ID'],
+            ['1'],
+            ['2'],
+            ['3'],
+            [], // Row 5: empty
+            [], // Row 6: empty
+            [], // Row 7: empty
+            ['35'], // Row 8: stray total formula / count (=COUNTA) at the bottom
+          ],
+        }),
+        { status: 200 },
+      )
+    })
+
+    const client = new GoogleSheetsClient({
+      spreadsheetId: 'test-sheet-id',
+      getAccessToken: () => 'test-access-token',
+      fetchImpl: mockFetch as unknown as typeof fetch,
+    })
+
+    const { rowIndex: _r, id: _id, isCompleted: _c, ...draft } = SYNTHETIC_LAPTOP_RECORDS[0]
+    const created = await client.createLaptopRecord(draft)
+
+    // Should be placed right after record 3 (row 5) with next ID 4, ignoring the stray '35' at row 8
+    expect(created.id).toBe(4)
+    expect(created.rowIndex).toBe(5)
+  })
+
+  it('automatically expands grid rows via appendDimension if targetRow exceeds current rowCount', async () => {
+    const calls: { url: string; body?: unknown }[] = []
+    const mockFetch = vi.fn(async (url: string, init?: RequestInit) => {
+      calls.push({
+        url,
+        body: init?.body ? JSON.parse(init.body as string) : undefined,
+      })
+
+      if (url.includes('fields=sheets.properties')) {
+        return new Response(
+          JSON.stringify({
+            sheets: [
+              {
+                properties: {
+                  sheetId: 12345,
+                  title: 'Список звітності',
+                  gridProperties: { rowCount: 10, columnCount: 30 },
+                },
+              },
+            ],
+          }),
+          { status: 200 },
+        )
+      }
+
+      if (url.includes('values:batchUpdate')) {
+        return new Response(JSON.stringify({ totalUpdatedCells: 27 }), { status: 200 })
+      }
+
+      if (url.includes(':batchUpdate')) {
+        return new Response(JSON.stringify({ replies: [{}] }), { status: 200 })
+      }
+
+      return new Response(
+        JSON.stringify({
+          // 10 records filling the 10-row sheet
+          values: [
+            ['ID'],
+            ['1'],
+            ['2'],
+            ['3'],
+            ['4'],
+            ['5'],
+            ['6'],
+            ['7'],
+            ['8'],
+            ['9'],
+            ['10'],
+          ],
+        }),
+        { status: 200 },
+      )
+    })
+
+    const client = new GoogleSheetsClient({
+      spreadsheetId: 'test-sheet-id',
+      getAccessToken: () => 'test-access-token',
+      fetchImpl: mockFetch as unknown as typeof fetch,
+    })
+
+    const { rowIndex: _r, id: _id, isCompleted: _c, ...draft } = SYNTHETIC_LAPTOP_RECORDS[0]
+    const created = await client.createLaptopRecord(draft)
+
+    // Next row is 12, which exceeds rowCount 10
+    expect(created.id).toBe(11)
+    expect(created.rowIndex).toBe(12)
+
+    // Verify appendDimension request was dispatched
+    const appendCall = calls.find((c) =>
+      JSON.stringify(c.body ?? '').includes('appendDimension'),
+    )
+    expect(appendCall).toBeDefined()
+  })
+
   it('deletes a row in Google Sheets via deleteDimension (ROWS) and restores F2 array formula when row 2 is deleted', async () => {
     const calls: { url: string; body?: unknown; method?: string }[] = []
     const mockFetch = vi.fn(async (url: string, init?: RequestInit) => {

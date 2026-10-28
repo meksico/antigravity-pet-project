@@ -229,7 +229,7 @@ export function ProvisioningWorkspace() {
 
     if (sheetsClient) {
       try {
-        const persisted = await sheetsClient.createLaptopRecord(draft)
+        const persisted = await sheetsClient.createLaptopRecord(draft, maxRowIndex + 1)
         setRecords((prev) =>
           prev.map((item) => (item.id === optimisticRecord.id ? persisted : item)),
         )
