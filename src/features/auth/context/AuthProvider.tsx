@@ -49,8 +49,8 @@ declare global {
 const DEFAULT_PRESETS: OperatorPresets = {
   militaryUnit: 'A0000',
   infosecRank: 'старший лейтенант',
-  infosecName: 'Сидоренко І.В.',
-  infosecPhone: '0999008000',
+  infosecName: 'Романенко А.О.',
+  infosecPhone: '0679900750',
   defaultLocation: 'ППД',
 }
 

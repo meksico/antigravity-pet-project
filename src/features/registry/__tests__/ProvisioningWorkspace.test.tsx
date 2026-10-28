@@ -120,6 +120,10 @@ describe('Provisioning Accounting Workspace — Картки обліку ПЕО
     expect(within(dialog).getByText(/ДАТА\/ЧАС ПРИЙНЯТТЯ ТА ДАТА\/ЧАС ВИДАЧІ/i)).toBeInTheDocument()
     expect(within(dialog).getByText(/СЛУЖБА ЗАХИСТУ \(НСЗІ\)/i)).toBeInTheDocument()
 
+    // Verify default values from _списки columns K & L are populated
+    expect(within(dialog).getByLabelText(/НСЗІ ФІО/i)).toHaveValue('Романенко А.О.')
+    expect(within(dialog).getByLabelText(/НСЗІ тел/i)).toHaveValue('0679900750')
+
     await user.type(within(dialog).getByLabelText(/Інвентарний номер/i), '88.0')
     await user.type(within(dialog).getByLabelText(/Імʼя ПЕОМ/i), 'DESKTOP-NEW106')
     await user.type(within(dialog).getByLabelText(/WiFi MAC/i), 'aa-bb-cc-11-22-33')

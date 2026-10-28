@@ -167,7 +167,7 @@ export function parseSheetRowToLaptopRecord(
 }
 
 /**
- * Reference Dictionaries from '_списки' (Columns A..J)
+ * Reference Dictionaries from '_списки' (Columns A..L)
  */
 export interface ReferenceDictionaries {
   networks: string[] // A: Мережа
@@ -180,6 +180,8 @@ export interface ReferenceDictionaries {
   militaryUnits: string[] // H: Військова частина
   policies: string[] // I: Політика
   ranks: string[] // J: Звання
+  infosecOfficers: string[] // K: НСЗІ відповідальний ФІО
+  infosecPhones: string[] // L: НСЗІ телефон
 }
 
 export function parseDictionariesSheet(rawRows: unknown[][]): ReferenceDictionaries {
@@ -207,6 +209,8 @@ export function parseDictionariesSheet(rawRows: unknown[][]): ReferenceDictionar
     militaryUnits: extractColumn(7),
     policies: extractColumn(8),
     ranks: extractColumn(9),
+    infosecOfficers: extractColumn(10),
+    infosecPhones: extractColumn(11),
   }
 }
 

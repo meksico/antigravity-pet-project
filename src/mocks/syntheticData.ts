@@ -63,6 +63,8 @@ export const DEFAULT_DICTIONARIES: ReferenceDictionaries = {
     'Генерал-лейтенант',
     'Генерал',
   ],
+  infosecOfficers: ['Романенко А.О.'],
+  infosecPhones: ['0679900750'],
 }
 
 /**

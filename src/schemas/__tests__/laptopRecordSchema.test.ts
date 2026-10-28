@@ -132,7 +132,7 @@ describe('28-Column Laptop Record Schema & Sheet Parsers (AC-002, AC-004, AC-007
     expect(validHandover.success).toBe(true)
   })
 
-  it('parses _списки 2D grid into 10 reference lookup lists including Column J (Звання)', () => {
+  it('parses _списки 2D grid into 12 reference lookup lists including Column K (НСЗІ відповідальний ФІО) and Column L (НСЗІ телефон)', () => {
     const rawGrid = [
       [
         'Мережа',
@@ -145,6 +145,8 @@ describe('28-Column Laptop Record Schema & Sheet Parsers (AC-002, AC-004, AC-007
         'Військова частина',
         'Політика',
         'Звання',
+        'НСЗІ відповідальний ФІО',
+        'НСЗІ телефон',
       ],
       [
         'Без підключення',
@@ -157,8 +159,10 @@ describe('28-Column Laptop Record Schema & Sheet Parsers (AC-002, AC-004, AC-007
         'A0000',
         'АС-1',
         'Рекрут',
+        'Романенко А.О.',
+        '0679900750',
       ],
-      ['Інтернет', 'СЗІвАС', 'НТ', 'ІСД-І', 'Штаб', '', '', '', 'АС-2, 3', 'Солдат'],
+      ['Інтернет', 'СЗІвАС', 'НТ', 'ІСД-І', 'Штаб', '', '', '', 'АС-2, 3', 'Солдат', '', ''],
     ]
 
     const dicts = parseDictionariesSheet(rawGrid)
@@ -166,6 +170,8 @@ describe('28-Column Laptop Record Schema & Sheet Parsers (AC-002, AC-004, AC-007
     expect(dicts.subdivisions).toEqual(['САДн', 'Штаб'])
     expect(dicts.militaryUnits).toEqual(['A0000'])
     expect(dicts.ranks).toEqual(['Рекрут', 'Солдат'])
+    expect(dicts.infosecOfficers).toEqual(['Романенко А.О.'])
+    expect(dicts.infosecPhones).toEqual(['0679900750'])
   })
 
   it('parses Чек-ліст Column A only across all 27 steps (ignoring any Column B values for security)', () => {

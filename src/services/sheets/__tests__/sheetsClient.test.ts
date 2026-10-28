@@ -49,7 +49,7 @@ describe('GoogleSheetsClient — REST API v4 Integration & Formula Safety (AC-00
               ],
             },
             {
-              range: "'_списки'!A1:J100",
+              range: "'_списки'!A1:L100",
               values: [
                 [
                   'Мережа',
@@ -62,6 +62,8 @@ describe('GoogleSheetsClient — REST API v4 Integration & Formula Safety (AC-00
                   'Військова частина',
                   'Політика',
                   'Звання',
+                  'НСЗІ відповідальний ФІО',
+                  'НСЗІ телефон',
                 ],
                 [
                   'Інтернет',
@@ -74,6 +76,8 @@ describe('GoogleSheetsClient — REST API v4 Integration & Formula Safety (AC-00
                   'A0000',
                   'АС-1',
                   'Солдат',
+                  'Романенко А.О.',
+                  '0679900750',
                 ],
               ],
             },
@@ -100,6 +104,8 @@ describe('GoogleSheetsClient — REST API v4 Integration & Formula Safety (AC-00
     expect(data.records[0].wifiMac).toBe('80:13:16:7D:48:3A')
     expect(data.records[0].localNetwork).toBe('ІСД-Інтернет')
     expect(data.dictionaries.networks).toEqual(['Інтернет'])
+    expect(data.dictionaries.infosecOfficers).toEqual(['Романенко А.О.'])
+    expect(data.dictionaries.infosecPhones).toEqual(['0679900750'])
     expect(data.checklistSteps).toHaveLength(2)
   })
 

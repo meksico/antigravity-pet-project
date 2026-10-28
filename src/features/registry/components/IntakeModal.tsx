@@ -122,8 +122,8 @@ export function IntakeModal({
         matchCanonicalRank('Майор') ||
         dictionaries.ranks[0] ||
         'Майор',
-      infosecName: presets.infosecName,
-      infosecPhone: presets.infosecPhone,
+      infosecName: dictionaries.infosecOfficers[0] || presets.infosecName || 'Романенко А.О.',
+      infosecPhone: dictionaries.infosecPhones[0] || presets.infosecPhone || '0679900750',
       policy: dictionaries.policies[3] ?? 'AC-3 Light (тільки парольна політика)',
       localNetwork: 'ІСД-Інтернет',
     }
@@ -724,7 +724,13 @@ export function IntakeModal({
                   className="input-light"
                   value={form.infosecName}
                   onChange={handleFieldChange}
+                  list="intake-infosec-officers-list"
                 />
+                <datalist id="intake-infosec-officers-list">
+                  {dictionaries.infosecOfficers.map((item) => (
+                    <option key={item} value={item} />
+                  ))}
+                </datalist>
               </div>
               <div className="col-span-4 form-field-light">
                 <label htmlFor="intake-infosec-phone">НСЗІ тел</label>
@@ -735,7 +741,13 @@ export function IntakeModal({
                   className="input-light"
                   value={form.infosecPhone}
                   onChange={handleFieldChange}
+                  list="intake-infosec-phones-list"
                 />
+                <datalist id="intake-infosec-phones-list">
+                  {dictionaries.infosecPhones.map((item) => (
+                    <option key={item} value={item} />
+                  ))}
+                </datalist>
               </div>
             </div>
           </div>
