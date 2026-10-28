@@ -155,4 +155,67 @@ export function sanitizeFormulaTrigger(value: string): string {
   return value
 }
 
+/**
+ * Calculates the maximum record ID across the dataset, or null if empty.
+ */
+export function getMaxRecordId(records: readonly { id: number }[] | null | undefined): number | null {
+  if (!records || records.length === 0) return null
+
+  let max = -Infinity
+  let found = false
+
+  for (const r of records) {
+    if (typeof r?.id === 'number' && Number.isFinite(r.id)) {
+      if (r.id > max) {
+        max = r.id
+        found = true
+      }
+    }
+  }
+
+  return found ? max : null
+}
+
+/**
+ * Calculates the highest numeric inventory number ("Инв.н.") across the dataset,
+ * handling strings, formatted numbers, and alphanumeric prefixes gracefully.
+ */
+export function getMaxInventoryNumber(
+  records: readonly { inventoryNumber?: string | null }[] | null | undefined,
+): number | null {
+  if (!records || records.length === 0) return null
+
+  let max = -Infinity
+  let found = false
+
+  for (const record of records) {
+    if (!record.inventoryNumber) continue
+    const trimmed = String(record.inventoryNumber).trim()
+    if (!trimmed) continue
+
+    // 1. Direct integer check (e.g. "45")
+    const directNum = Number.parseInt(trimmed, 10)
+    if (!Number.isNaN(directNum) && String(directNum) === trimmed) {
+      if (directNum > max) {
+        max = directNum
+        found = true
+      }
+      continue
+    }
+
+    // 2. Extract digits if there is non-digit decoration (e.g. "INV-45", "45.0")
+    const match = trimmed.match(/\d+/)
+    if (match) {
+      const extracted = Number.parseInt(match[0], 10)
+      if (!Number.isNaN(extracted) && extracted > max) {
+        max = extracted
+        found = true
+      }
+    }
+  }
+
+  return found ? max : null
+}
+
+
 

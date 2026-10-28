@@ -5,6 +5,7 @@ import App from '../../../App'
 import { AuthContext, type AuthContextValue } from '../../auth/context/AuthContext'
 import { GoogleSheetsClient } from '../../../services/sheets/sheetsClient'
 import { ProvisioningWorkspace } from '../components/ProvisioningWorkspace'
+import { OperatorSessionBar } from '../../auth/components/OperatorSessionBar'
 import {
   DEFAULT_CHECKLIST_STEPS,
   DEFAULT_DICTIONARIES,
@@ -59,6 +60,8 @@ describe('Provisioning Accounting Workspace — Картки обліку ПЕО
     expect(screen.getByTestId('kpi-total')).toHaveTextContent('5')
     expect(screen.getByTestId('kpi-completed')).toHaveTextContent('2')
     expect(screen.getByTestId('kpi-in-progress')).toHaveTextContent('3')
+    expect(screen.getByTestId('brand-max-id')).toHaveTextContent('105')
+    expect(screen.getByTestId('brand-max-inventory')).toHaveTextContent('45')
 
     // Default sort is descending by ID (#105 first, #101 last)
     const sortAscBtn = screen.getByRole('button', { name: /Зростання/i })
@@ -146,6 +149,8 @@ describe('Provisioning Accounting Workspace — Картки обліку ПЕО
     expect(screen.getAllByText('DESKTOP-NEW106').length).toBeGreaterThan(0)
     expect(screen.getAllByText('AA:BB:CC:11:22:33').length).toBeGreaterThan(0)
     expect(screen.getByTestId('kpi-total')).toHaveTextContent('6')
+    expect(screen.getByTestId('brand-max-id')).toHaveTextContent('106')
+    expect(screen.getByTestId('brand-max-inventory')).toHaveTextContent('88')
   })
 
   it('expands full card details, duplicates a card with next ID, edits an existing card, and deletes a card', async () => {
@@ -633,5 +638,41 @@ describe('Provisioning Accounting Workspace — Картки обліку ПЕО
     appendSpy.mockRestore()
     updateSpy.mockRestore()
     fetchSpy.mockRestore()
+  })
+
+  it('renders fallback dash "—" in brand-block when maxId and maxInventoryNumber are null', () => {
+    const mockAuthContext: AuthContextValue = {
+      session: {
+        email: 'operator@example.gov.ua',
+        name: 'Офіцер Безпеки',
+        mode: 'demo',
+        expiresAt: Date.now() + 3600_000,
+        accessToken: null,
+      },
+      signInWithGoogle: vi.fn(),
+      signInDemo: vi.fn(),
+      signOut: vi.fn(),
+      authError: null,
+    }
+
+    render(
+      <AuthContext.Provider value={mockAuthContext}>
+        <OperatorSessionBar
+          totalCount={0}
+          inProgressCount={0}
+          completedCount={0}
+          maxId={null}
+          maxInventoryNumber={null}
+          statusFilter="all"
+          viewMode="split"
+          onSelectStatusFilter={() => {}}
+          onSelectViewMode={() => {}}
+          onOpenCreateCard={() => {}}
+        />
+      </AuthContext.Provider>,
+    )
+
+    expect(screen.getByTestId('brand-max-id')).toHaveTextContent('—')
+    expect(screen.getByTestId('brand-max-inventory')).toHaveTextContent('—')
   })
 })

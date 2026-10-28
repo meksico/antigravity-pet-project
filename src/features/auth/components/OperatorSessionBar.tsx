@@ -18,6 +18,8 @@ interface OperatorSessionBarProps {
   totalCount: number
   inProgressCount: number
   completedCount: number
+  maxId?: number | null
+  maxInventoryNumber?: number | string | null
   statusFilter: StatusFilter
   viewMode: WorkspaceViewMode
   onSelectStatusFilter: (status: StatusFilter) => void
@@ -31,6 +33,8 @@ export function OperatorSessionBar({
   totalCount,
   inProgressCount,
   completedCount,
+  maxId,
+  maxInventoryNumber,
   statusFilter,
   viewMode,
   onSelectStatusFilter,
@@ -88,6 +92,29 @@ export function OperatorSessionBar({
             <Laptop size={20} />
           </div>
           <h1 className="brand-block__title">Картки обліку ПЕОМ</h1>
+
+          <div className="brand-block__stats" role="group" aria-label="Максимальні індекси реєстру">
+            <span
+              className="brand-stat-pill"
+              title="Найбільший ID серед усіх карток"
+            >
+              <span className="brand-stat-pill__label">ID:</span>
+              <strong className="brand-stat-pill__value" data-testid="brand-max-id">
+                {maxId !== null && maxId !== undefined ? maxId : '—'}
+              </strong>
+            </span>
+            <span
+              className="brand-stat-pill"
+              title="Найбільший інвентарний номер (Инв.н.) серед усіх карток"
+            >
+              <span className="brand-stat-pill__label">Инв.н.:</span>
+              <strong className="brand-stat-pill__value" data-testid="brand-max-inventory">
+                {maxInventoryNumber !== null && maxInventoryNumber !== undefined
+                  ? maxInventoryNumber
+                  : '—'}
+              </strong>
+            </span>
+          </div>
         </div>
 
         {/* Right Actions: Sync + Create CTA + User Avatar in Top-Right Corner */}

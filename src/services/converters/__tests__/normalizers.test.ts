@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
+  getMaxInventoryNumber,
+  getMaxRecordId,
   matchesMacSearch,
   normalizeBooleanCell,
   normalizeEsetUuid,
@@ -169,6 +171,68 @@ describe('Data Hygiene Normalizers (AC-002)', () => {
       expect(sanitizeFormulaTrigger('-cmd')).toBe("'-cmd")
       expect(sanitizeFormulaTrigger('@SUM(A1:A2)')).toBe("'@SUM(A1:A2)")
       expect(sanitizeFormulaTrigger('DESKTOP-DEMO101')).toBe('DESKTOP-DEMO101')
+    })
+  })
+
+  describe('getMaxRecordId', () => {
+    it('returns the maximum id from a list of records', () => {
+      const records = [{ id: 101 }, { id: 105 }, { id: 102 }]
+      expect(getMaxRecordId(records)).toBe(105)
+    })
+
+    it('ignores non-finite or NaN ids gracefully', () => {
+      const records = [{ id: NaN }, { id: 42 }, { id: Infinity }]
+      expect(getMaxRecordId(records)).toBe(42)
+    })
+
+    it('returns null for an empty array or undefined input', () => {
+      expect(getMaxRecordId([])).toBeNull()
+      expect(getMaxRecordId(undefined as unknown as [])).toBeNull()
+    })
+  })
+
+  describe('getMaxInventoryNumber', () => {
+    it('calculates the highest numerical inventory number from string records', () => {
+      const records = [
+        { inventoryNumber: '18' },
+        { inventoryNumber: '19' },
+        { inventoryNumber: '45' },
+        { inventoryNumber: '24' },
+        { inventoryNumber: '31' },
+      ]
+      expect(getMaxInventoryNumber(records)).toBe(45)
+    })
+
+    it('correctly handles multi-digit and larger numbers where string sorting would fail', () => {
+      const records = [
+        { inventoryNumber: '9' },
+        { inventoryNumber: '105' },
+        { inventoryNumber: '45' },
+      ]
+      expect(getMaxInventoryNumber(records)).toBe(105)
+    })
+
+    it('handles decimal .0 formatting and alphanumeric prefixes gracefully', () => {
+      const records = [
+        { inventoryNumber: '42.0' },
+        { inventoryNumber: 'INV-99' },
+        { inventoryNumber: '18' },
+      ]
+      expect(getMaxInventoryNumber(records)).toBe(99)
+    })
+
+    it('skips empty, whitespace, non-numeric, or null inventory values', () => {
+      const records = [
+        { inventoryNumber: '' },
+        { inventoryNumber: '   ' },
+        { inventoryNumber: 'Б/Н' },
+        { inventoryNumber: null },
+      ]
+      expect(getMaxInventoryNumber(records)).toBeNull()
+    })
+
+    it('returns null for an empty records array', () => {
+      expect(getMaxInventoryNumber([])).toBeNull()
     })
   })
 })

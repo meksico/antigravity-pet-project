@@ -73,6 +73,37 @@
   letter-spacing: -0.01em;
 }
 
+.brand-block__stats {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-left: 0.35rem;
+}
+
+.brand-stat-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
+  background: #181c24;
+  border: 1px solid var(--border-chrome);
+  padding: 0.18rem 0.52rem;
+  border-radius: 6px;
+  font-size: 0.74rem;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.brand-stat-pill__label {
+  color: #9ca3af;
+  font-weight: 600;
+}
+
+.brand-stat-pill__value {
+  color: var(--brand-orange);
+  font-family: var(--font-mono);
+  font-weight: 700;
+}
+
 .segmented-group {
   display: inline-flex;
   align-items: center;

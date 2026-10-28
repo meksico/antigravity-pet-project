@@ -10,6 +10,8 @@ import type {
   ReferenceDictionaries,
 } from '../../../schemas/laptopRecordSchema'
 import {
+  getMaxInventoryNumber,
+  getMaxRecordId,
   matchesMacSearch,
 } from '../../../services/converters/normalizers'
 import { formatCardClipboardText } from '../../../services/converters/cardClipboardFormatter'
@@ -110,9 +112,11 @@ export function ProvisioningWorkspace() {
   const totalCount = records.length
   const completedCount = useMemo(() => records.filter((r) => r.isCompleted).length, [records])
   const inProgressCount = totalCount - completedCount
+  const maxId = useMemo(() => getMaxRecordId(records), [records])
+  const maxInventoryNumber = useMemo(() => getMaxInventoryNumber(records), [records])
   const nextAutoId = useMemo(
-    () => records.reduce((max, r) => (r.id > max ? r.id : max), 0) + 1,
-    [records],
+    () => (maxId ?? 0) + 1,
+    [maxId],
   )
 
   const filteredRecords = useMemo(() => {
@@ -448,6 +452,8 @@ export function ProvisioningWorkspace() {
           totalCount={totalCount}
           inProgressCount={inProgressCount}
           completedCount={completedCount}
+          maxId={maxId}
+          maxInventoryNumber={maxInventoryNumber}
           statusFilter={filters.status}
           viewMode={filters.viewMode}
           onSelectStatusFilter={(status) => handleUpdateFilters({ status })}
