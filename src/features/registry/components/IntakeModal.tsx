@@ -127,9 +127,20 @@ export function IntakeModal({
       infosecName: dictionaries.infosecOfficers[0] || presets.infosecName || 'Романенко А.О.',
       infosecPhone: dictionaries.infosecPhones[0] || presets.infosecPhone || '0679900750',
       policy: dictionaries.policies[3] ?? 'AC-3 Light (тільки парольна політика)',
-      localNetwork: 'ІСД-Інтернет',
+      localNetwork: dictionaries.localNetworks?.[0] ?? 'ІСД-Інтернет',
     }
   })
+
+  const localNetworkOptions = useMemo(() => {
+    const list = [...(dictionaries.localNetworks || [])]
+    if (
+      form.localNetwork &&
+      !list.some((item) => item.toLowerCase() === form.localNetwork.toLowerCase())
+    ) {
+      list.unshift(form.localNetwork)
+    }
+    return list
+  }, [dictionaries.localNetworks, form.localNetwork])
 
   const responsibleRankOptions = useMemo(() => {
     const list = [...dictionaries.ranks]
@@ -521,14 +532,19 @@ export function IntakeModal({
               </div>
               <div className="col-span-4 form-field-light">
                 <label htmlFor="intake-local-net">Мережа локальна</label>
-                <input
+                <select
                   id="intake-local-net"
                   name="localNetwork"
-                  type="text"
-                  className="input-light"
+                  className="select-light"
                   value={form.localNetwork}
                   onChange={handleFieldChange}
-                />
+                >
+                  {localNetworkOptions.map((item) => (
+                    <option key={item} value={item}>
+                      {item}
+                    </option>
+                  ))}
+                </select>
               </div>
               <div className="col-span-4 form-field-light">
                 <label htmlFor="intake-classification">ГОД</label>

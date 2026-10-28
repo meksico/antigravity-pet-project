@@ -65,6 +65,7 @@ export const DEFAULT_DICTIONARIES: ReferenceDictionaries = {
   ],
   infosecOfficers: ['Романенко А.О.'],
   infosecPhones: ['0679900750'],
+  localNetworks: ['ІСД-Інтернет', 'АСУ-Дніпро', 'АС-1 Локальна', 'Автономна'],
 }
 
 /**

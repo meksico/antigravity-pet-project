@@ -95,12 +95,12 @@ export class GoogleSheetsClient {
   }
 
   /**
-   * Hydrates 'Список звітності', '_списки' (Columns A..L), and 'Чек-ліст!A1:A30' (Column A only) in a single batchGet request.
+   * Hydrates 'Список звітності', '_списки' (Columns A..M), and 'Чек-ліст!A1:A30' (Column A only) in a single batchGet request.
    */
   public async fetchWorkbookData(): Promise<WorkbookData> {
     const ranges = [
       `'${REGISTRY_SHEET_NAME}'!A1:AB2000`,
-      `'_списки'!A1:L100`,
+      `'_списки'!A1:M100`,
       `'Чек-ліст'!A1:A30`,
     ]
     const query = ranges.map((r) => `ranges=${encodeURIComponent(r)}`).join('&')

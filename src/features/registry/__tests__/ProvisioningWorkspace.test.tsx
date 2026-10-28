@@ -133,6 +133,16 @@ describe('Provisioning Accounting Workspace — Картки обліку ПЕО
     expect(within(dialog).getByLabelText(/НСЗІ ФІО/i)).toHaveValue('Романенко А.О.')
     expect(within(dialog).getByLabelText(/НСЗІ тел/i)).toHaveValue('0679900750')
 
+    // Verify Мережа локальна is a dropdown populated from _списки Column M with default value
+    const localNetSelect = within(dialog).getByLabelText(/Мережа локальна/i)
+    expect(localNetSelect.tagName).toBe('SELECT')
+    expect(localNetSelect).toHaveValue('ІСД-Інтернет')
+    expect(within(localNetSelect).getByRole('option', { name: 'АСУ-Дніпро' })).toBeInTheDocument()
+
+    // Select different local network from dropdown
+    await user.selectOptions(localNetSelect, 'АСУ-Дніпро')
+    expect(localNetSelect).toHaveValue('АСУ-Дніпро')
+
     await user.type(within(dialog).getByLabelText(/Інвентарний номер/i), '88.0')
     await user.type(within(dialog).getByLabelText(/Імʼя ПЕОМ/i), 'DESKTOP-NEW106')
     await user.type(within(dialog).getByLabelText(/WiFi MAC/i), 'aa-bb-cc-11-22-33')
