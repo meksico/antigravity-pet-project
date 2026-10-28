@@ -12,7 +12,7 @@ interface RegistryGridProps {
   onOpenChecklist: (record: LaptopRecord) => void
   onOpenHandover: (record: LaptopRecord) => void
   onEditCard: (record: LaptopRecord) => void
-  onDeleteCard: (recordId: number) => void
+  onDeleteCard: (recordId: number, rowIndex?: number) => void
   onCopyCardToClipboard: (record: LaptopRecord) => void
 }
 
@@ -100,8 +100,9 @@ export function RegistryGrid({
             ) : (
               records.map((record) => {
                 const isSelected = selectedIds.includes(record.id)
+                const rowKey = `${record.rowIndex}-${record.id}`
                 return (
-                  <tr key={record.id} className={isSelected ? 'row--selected' : undefined}>
+                  <tr key={rowKey} className={isSelected ? 'row--selected' : undefined}>
                     <td className="col-actions-left">
                       <div className="row-actions-group">
                         <input
@@ -130,7 +131,7 @@ export function RegistryGrid({
                           type="button"
                           className="table-icon-btn table-icon-btn--danger"
                           title="Видалити картку"
-                          onClick={() => onDeleteCard(record.id)}
+                          onClick={() => onDeleteCard(record.id, record.rowIndex)}
                         >
                           <Trash2 size={14} />
                         </button>

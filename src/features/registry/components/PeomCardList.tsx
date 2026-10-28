@@ -25,7 +25,7 @@ interface PeomCardListProps {
   onOpenHandover: (record: LaptopRecord) => void
   onEditCard: (record: LaptopRecord) => void
   onDuplicateCard: (record: LaptopRecord) => void
-  onDeleteCard: (recordId: number) => void
+  onDeleteCard: (recordId: number, rowIndex?: number) => void
   onCopyCardToClipboard: (record: LaptopRecord) => void
 }
 
@@ -38,11 +38,11 @@ export function PeomCardList({
   onDeleteCard,
   onCopyCardToClipboard,
 }: PeomCardListProps) {
-  const [expandedIds, setExpandedIds] = useState<readonly number[]>([])
+  const [expandedRowIndexes, setExpandedRowIndexes] = useState<readonly number[]>([])
 
-  const toggleExpand = (id: number) => {
-    setExpandedIds((prev) =>
-      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id],
+  const toggleExpand = (rowIndex: number) => {
+    setExpandedRowIndexes((prev) =>
+      prev.includes(rowIndex) ? prev.filter((item) => item !== rowIndex) : [...prev, rowIndex],
     )
   }
 
@@ -65,10 +65,11 @@ export function PeomCardList({
       ) : (
         <div className="peom-cards-stack">
           {records.map((record, index) => {
-            const isExpanded = expandedIds.includes(record.id)
+            const isExpanded = expandedRowIndexes.includes(record.rowIndex)
+            const cardKey = `${record.rowIndex}-${record.id}`
             return (
               <article
-                key={record.id}
+                key={cardKey}
                 className={`peom-card ${index === 0 ? 'peom-card--featured' : ''}`}
               >
                 {/* Top Strip */}
@@ -118,7 +119,7 @@ export function PeomCardList({
                       className="icon-btn icon-btn--danger"
                       title="Видалити картку"
                       aria-label={`Видалити картку ${record.hostname || `#${record.id}`}`}
-                      onClick={() => onDeleteCard(record.id)}
+                      onClick={() => onDeleteCard(record.id, record.rowIndex)}
                     >
                       <Trash2 size={15} />
                     </button>
@@ -286,7 +287,7 @@ export function PeomCardList({
                     <button
                       type="button"
                       className="expand-toggle-btn expand-toggle-btn--outlined"
-                      onClick={() => toggleExpand(record.id)}
+                      onClick={() => toggleExpand(record.rowIndex)}
                     >
                       <span>Згорнути подробиці</span>
                       <ChevronUp size={14} />
@@ -296,7 +297,7 @@ export function PeomCardList({
                   <button
                     type="button"
                     className="expand-toggle-btn"
-                    onClick={() => toggleExpand(record.id)}
+                    onClick={() => toggleExpand(record.rowIndex)}
                   >
                     <span>Розгорнути повну інформацію</span>
                     <ChevronDown size={14} />

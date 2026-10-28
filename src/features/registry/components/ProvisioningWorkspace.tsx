@@ -272,7 +272,9 @@ export function ProvisioningWorkspace() {
   }
 
   const handleEditRecord = async (updatedRecord: LaptopRecord) => {
-    setRecords((prev) => prev.map((r) => (r.id === updatedRecord.id ? updatedRecord : r)))
+    setRecords((prev) =>
+      prev.map((r) => (r.rowIndex === updatedRecord.rowIndex ? updatedRecord : r)),
+    )
 
     if (
       updatedRecord.subdivision &&
@@ -313,21 +315,27 @@ export function ProvisioningWorkspace() {
     })
   }
 
-  const handleDeleteCard = async (recordId: number) => {
-    const target = records.find((r) => r.id === recordId)
+  const handleDeleteCard = async (recordId: number, rowIndex?: number) => {
+    const target =
+      rowIndex != null
+        ? records.find((r) => r.rowIndex === rowIndex)
+        : records.find((r) => r.id === recordId)
+    if (!target) return
+    const targetRowIndex = target.rowIndex
+
     setRecords((prev) =>
       prev
-        .filter((r) => r.id !== recordId)
+        .filter((r) => r.rowIndex !== targetRowIndex)
         .map((r) => {
-          if (target && r.rowIndex > target.rowIndex) {
+          if (r.rowIndex > targetRowIndex) {
             return { ...r, rowIndex: r.rowIndex - 1 }
           }
           return r
         }),
     )
-    setSelectedIds((prev) => prev.filter((id) => id !== recordId))
+    setSelectedIds((prev) => prev.filter((id) => id !== target.id))
 
-    if (sheetsClient && target) {
+    if (sheetsClient) {
       try {
         await sheetsClient.deleteLaptopRecord(target)
         setSyncBanner(
@@ -349,8 +357,15 @@ export function ProvisioningWorkspace() {
     setSyncBanner(`Картку ID #${record.id} (${record.hostname || 'без імені'}) скопійовано в буфер обміну`)
   }
 
-  const handleConfirmChecklist = async (recordId: number, completed: boolean) => {
-    const target = records.find((r) => r.id === recordId)
+  const handleConfirmChecklist = async (
+    recordId: number,
+    completed: boolean,
+    rowIndex?: number,
+  ) => {
+    const target =
+      rowIndex != null
+        ? records.find((r) => r.rowIndex === rowIndex)
+        : records.find((r) => r.id === recordId)
     if (!target) return
 
     const updatedRecord: LaptopRecord = {
@@ -358,7 +373,9 @@ export function ProvisioningWorkspace() {
       checklistCompleted: completed,
     }
 
-    setRecords((prev) => prev.map((r) => (r.id === recordId ? updatedRecord : r)))
+    setRecords((prev) =>
+      prev.map((r) => (r.rowIndex === target.rowIndex ? updatedRecord : r)),
+    )
 
     if (sheetsClient) {
       try {
@@ -372,8 +389,12 @@ export function ProvisioningWorkspace() {
   const handleConfirmHandover = async (
     recordId: number,
     payload: { issuedAt: string; issuedToName: string; issuedToPhone: string },
+    rowIndex?: number,
   ) => {
-    const target = records.find((r) => r.id === recordId)
+    const target =
+      rowIndex != null
+        ? records.find((r) => r.rowIndex === rowIndex)
+        : records.find((r) => r.id === recordId)
     if (!target) return
 
     const updatedRecord: LaptopRecord = {
@@ -384,7 +405,9 @@ export function ProvisioningWorkspace() {
       isCompleted: true,
     }
 
-    setRecords((prev) => prev.map((r) => (r.id === recordId ? updatedRecord : r)))
+    setRecords((prev) =>
+      prev.map((r) => (r.rowIndex === target.rowIndex ? updatedRecord : r)),
+    )
 
     if (sheetsClient) {
       try {
@@ -500,7 +523,7 @@ export function ProvisioningWorkspace() {
               onOpenHandover={(record) => setActiveHandoverRecord(record)}
               onEditCard={handleOpenEditModal}
               onDuplicateCard={(record) => void handleDuplicateCard(record)}
-              onDeleteCard={(recordId) => void handleDeleteCard(recordId)}
+              onDeleteCard={(recordId, rowIndex) => void handleDeleteCard(recordId, rowIndex)}
               onCopyCardToClipboard={handleCopyCardToClipboard}
             />
           )}
@@ -515,7 +538,7 @@ export function ProvisioningWorkspace() {
               onOpenChecklist={(record) => setActiveChecklistRecord(record)}
               onOpenHandover={(record) => setActiveHandoverRecord(record)}
               onEditCard={handleOpenEditModal}
-              onDeleteCard={(recordId) => void handleDeleteCard(recordId)}
+              onDeleteCard={(recordId, rowIndex) => void handleDeleteCard(recordId, rowIndex)}
               onCopyCardToClipboard={handleCopyCardToClipboard}
             />
           )}
@@ -526,7 +549,7 @@ export function ProvisioningWorkspace() {
         key={
           isCardModalOpen
             ? editingRecord
-              ? `edit-${editingRecord.id}`
+              ? `edit-${editingRecord.rowIndex}-${editingRecord.id}`
               : 'create-new'
             : 'closed-card-modal'
         }
@@ -547,18 +570,30 @@ export function ProvisioningWorkspace() {
       />
 
       <ChecklistDrawer
-        key={activeChecklistRecord?.id ?? 'closed-checklist'}
+        key={
+          activeChecklistRecord
+            ? `checklist-${activeChecklistRecord.rowIndex}-${activeChecklistRecord.id}`
+            : 'closed-checklist'
+        }
         record={activeChecklistRecord}
         steps={checklistSteps}
         onClose={() => setActiveChecklistRecord(null)}
-        onConfirmChecklist={(id, completed) => void handleConfirmChecklist(id, completed)}
+        onConfirmChecklist={(id, completed) =>
+          void handleConfirmChecklist(id, completed, activeChecklistRecord?.rowIndex)
+        }
       />
 
       <HandoverModal
-        key={activeHandoverRecord?.id ?? 'closed-handover'}
+        key={
+          activeHandoverRecord
+            ? `handover-${activeHandoverRecord.rowIndex}-${activeHandoverRecord.id}`
+            : 'closed-handover'
+        }
         record={activeHandoverRecord}
         onClose={() => setActiveHandoverRecord(null)}
-        onConfirmHandover={(id, payload) => void handleConfirmHandover(id, payload)}
+        onConfirmHandover={(id, payload) =>
+          void handleConfirmHandover(id, payload, activeHandoverRecord?.rowIndex)
+        }
       />
     </div>
   )

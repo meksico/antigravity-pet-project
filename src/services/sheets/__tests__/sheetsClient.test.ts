@@ -112,6 +112,49 @@ describe('GoogleSheetsClient — REST API v4 Integration & Formula Safety (AC-00
     expect(data.checklistSteps).toHaveLength(2)
   })
 
+  it('ignores stray or orphaned rows after consecutive empty rows when fetching workbook data', async () => {
+    const mockFetch = vi.fn(async () => {
+      return new Response(
+        JSON.stringify({
+          valueRanges: [
+            {
+              range: "'Список звітності'!A1:AB2000",
+              values: [
+                ['ID', 'Дата/час прийняття', 'Дата/час видачі'],
+                ['1', 46309.5, null, null, null, null, 'Штаб'],
+                ['2', 46310.5, null, null, null, null, 'Штаб'],
+                [], // empty row 4
+                [], // empty row 5
+                [], // empty row 6 (>= 3 empty rows)
+                ['41', 46311.5, null, null, null, null, 'ЗРД'], // orphaned row 7 at bottom of sheet
+              ],
+            },
+            {
+              range: "'_списки'!A1:M100",
+              values: [['Мережа'], ['Інтернет']],
+            },
+            {
+              range: "'Чек-ліст'!A1:A30",
+              values: [['Вимкнені всі трекінг активності']],
+            },
+          ],
+        }),
+        { status: 200 },
+      )
+    })
+
+    const client = new GoogleSheetsClient({
+      spreadsheetId: 'test-sheet-id',
+      getAccessToken: () => 'test-access-token',
+      fetchImpl: mockFetch as unknown as typeof fetch,
+    })
+
+    const data = await client.fetchWorkbookData()
+    // Should only have loaded the active continuous block (IDs 1 and 2), stopping before orphaned ID 41
+    expect(data.records).toHaveLength(2)
+    expect(data.records.map((r) => r.id)).toEqual([1, 2])
+  })
+
   it('verifies row ID before updating and writes disjoint ranges A..E and G..AB (never F)', async () => {
     const calls: { url: string; body?: unknown }[] = []
     const mockFetch = vi.fn(async (url: string, init?: RequestInit) => {

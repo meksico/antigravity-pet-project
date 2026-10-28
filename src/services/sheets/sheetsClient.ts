@@ -38,6 +38,7 @@ export interface GoogleSheetsClientConfig {
 }
 
 const SHEETS_API_BASE = 'https://sheets.googleapis.com/v4/spreadsheets'
+export const CONSECUTIVE_EMPTY_ROWS_THRESHOLD = 3
 
 /**
  * Typed client for Google Sheets REST API v4 with formula-safe disjoint writes (AC-003, AC-009, AC-010).
@@ -115,11 +116,19 @@ export class GoogleSheetsClient {
     const checklistRows = data.valueRanges?.[2]?.values ?? []
 
     const records: LaptopRecord[] = []
+    let consecutiveEmptyRows = 0
     // Row 0 is header row (Spreadsheet Row 1); data starts at index 1 (Spreadsheet Row 2)
     for (let i = 1; i < registryRows.length; i += 1) {
       const parsed = parseSheetRowToLaptopRecord(registryRows[i], i + 1)
       if (parsed) {
         records.push(parsed)
+        consecutiveEmptyRows = 0
+      } else {
+        consecutiveEmptyRows += 1
+        // After encountering consecutive empty rows after populated records, stop scanning
+        if (consecutiveEmptyRows >= CONSECUTIVE_EMPTY_ROWS_THRESHOLD && records.length > 0) {
+          break
+        }
       }
     }
 
@@ -275,18 +284,16 @@ export class GoogleSheetsClient {
       const num = isInteger ? Number.parseInt(idStr, 10) : NaN
 
       if (!Number.isNaN(num) && num > 0) {
-        // If we hit a large gap (>= 3 empty rows) and then see a number,
-        // it is an isolated summary / formula cell at the bottom of the sheet.
-        if (consecutiveEmptyRows >= 3) {
-          break
-        }
         if (num > maxId) maxId = num
         lastPopulatedRowIndex = i + 1
         consecutiveEmptyRows = 0
       } else {
         consecutiveEmptyRows += 1
-        // After encountering 3 empty rows after populated records, stop scanning
-        if (consecutiveEmptyRows >= 3 && lastPopulatedRowIndex > 1) {
+        // After encountering CONSECUTIVE_EMPTY_ROWS_THRESHOLD empty rows after populated records, stop scanning
+        if (
+          consecutiveEmptyRows >= CONSECUTIVE_EMPTY_ROWS_THRESHOLD &&
+          lastPopulatedRowIndex > 1
+        ) {
           break
         }
       }
